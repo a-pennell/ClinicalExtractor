@@ -1,0 +1,433 @@
+import { useMemo, useState } from "react";
+import { Activity, ClipboardList, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { extractClinicalEntityDocument } from "../../lib/clinical-extraction/extractClinicalEntities";
+import type { EvaluationFixture } from "../../lib/clinical-extraction/evaluationFixtures";
+import { sampleInputs } from "../../lib/clinical-extraction/sampleInputs";
+import { detectClinicalSections, getSectionForOffset, getSectionLabel } from "../../lib/clinical-extraction/sectionParser";
+import {
+  clearLatestSession,
+  loadLatestSession,
+  saveLatestSession,
+  type SavedExtractionSession
+} from "../../lib/clinical-extraction/sessionPersistence";
+import { specialtyLabels } from "../../lib/clinical-extraction/specialtyProfiles";
+import type {
+  AssertionStatus,
+  ClinicalEntity,
+  ClinicalEntityType,
+  CodingStatus,
+  Confidence,
+  EntityRelationType,
+  RelationStatus,
+  Specialty,
+  TerminologySystem
+} from "../../lib/clinical-extraction/types";
+import { ClinicalTextInput } from "./ClinicalTextInput";
+import { DocumentOutputPanel } from "./DocumentOutputPanel";
+import { EntityDetailPanel } from "./EntityDetailPanel";
+import { EvalLabPanel } from "./EvalLabPanel";
+import { ExtractedEntityPanel } from "./ExtractedEntityPanel";
+import { HighlightedClinicalText } from "./HighlightedClinicalText";
+import { SpecialtySelector } from "./SpecialtySelector";
+
+const defaultText = sampleInputs["primary-care"];
+
+export function ClinicalEntityExtractorPrototype() {
+  const [text, setText] = useState(defaultText);
+  const [specialty, setSpecialty] = useState<Specialty>("primary-care");
+  const [entities, setEntities] = useState<ClinicalEntity[]>(() =>
+    extractClinicalEntityDocument(defaultText, { specialty: "primary-care" }).entities
+  );
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(entities[0]?.id ?? null);
+  const [hasExtracted, setHasExtracted] = useState(true);
+  const [selectedTextRange, setSelectedTextRange] = useState({ start: 0, end: 0 });
+  const [manualEntityType, setManualEntityType] = useState<ClinicalEntityType>("problem");
+  const [savedSession, setSavedSession] = useState<SavedExtractionSession | null>(() => loadLatestSession());
+
+  const selectedEntity = useMemo(
+    () => entities.find((entity) => entity.id === selectedEntityId) ?? null,
+    [entities, selectedEntityId]
+  );
+  const sections = useMemo(() => detectClinicalSections(text), [text]);
+  const selectedCodingCount = useMemo(
+    () => entities.reduce((count, entity) => count + (entity.codings?.filter((coding) => coding.status === "selected").length ?? 0), 0),
+    [entities]
+  );
+  const relationCount = useMemo(
+    () => entities.reduce((count, entity) => count + (entity.relations?.length ?? 0), 0),
+    [entities]
+  );
+  const highPriorityCount = useMemo(
+    () => entities.filter((entity) => entity.uncertainty?.reviewPriority === "high").length,
+    [entities]
+  );
+  const reviewedEntityCount = useMemo(
+    () => entities.filter((entity) => entity.review?.status && entity.review.status !== "unreviewed").length,
+    [entities]
+  );
+  const selectedSourceText = text.slice(selectedTextRange.start, selectedTextRange.end).trim();
+
+  function handleTextChange(nextText: string) {
+    setText(nextText);
+
+    if (!nextText.trim()) {
+      setEntities([]);
+      setSelectedEntityId(null);
+      setSelectedTextRange({ start: 0, end: 0 });
+      setHasExtracted(false);
+    }
+  }
+
+  function handleExtract() {
+    const nextEntities = extractClinicalEntityDocument(text, { specialty }).entities;
+    setEntities(nextEntities);
+    setSelectedEntityId(nextEntities[0]?.id ?? null);
+    setHasExtracted(true);
+  }
+
+  function loadExample(nextSpecialty: Specialty) {
+    setSpecialty(nextSpecialty);
+    setText(sampleInputs[nextSpecialty]);
+    const nextEntities = extractClinicalEntityDocument(sampleInputs[nextSpecialty], { specialty: nextSpecialty }).entities;
+    setEntities(nextEntities);
+    setSelectedEntityId(nextEntities[0]?.id ?? null);
+    setHasExtracted(true);
+  }
+
+  function loadEvalFixture(fixture: EvaluationFixture) {
+    setSpecialty(fixture.specialty);
+    setText(fixture.text);
+    const nextEntities = extractClinicalEntityDocument(fixture.text, { specialty: fixture.specialty }).entities;
+    setEntities(nextEntities);
+    setSelectedEntityId(nextEntities[0]?.id ?? null);
+    setHasExtracted(true);
+  }
+
+  function handleSaveSession() {
+    if (!entities.length) return;
+    setSavedSession(saveLatestSession(text, specialty, entities));
+  }
+
+  function handleRestoreSession() {
+    const latest = loadLatestSession();
+    if (!latest) return;
+
+    setSavedSession(latest);
+    setText(latest.sourceText);
+    setSpecialty(latest.specialty);
+    setEntities(latest.entities);
+    setSelectedEntityId(latest.entities[0]?.id ?? null);
+    setHasExtracted(true);
+  }
+
+  function handleClearSavedSession() {
+    clearLatestSession();
+    setSavedSession(null);
+  }
+
+  function handleCodingStatusChange(
+    entityId: string,
+    system: TerminologySystem,
+    code: string,
+    nextStatus: CodingStatus
+  ) {
+    setEntities((currentEntities) =>
+      currentEntities.map((entity) => {
+        if (entity.id !== entityId || !entity.codings) return entity;
+
+        return {
+          ...entity,
+          codings: entity.codings.map((coding) => {
+            const isTarget = coding.system === system && coding.code === code;
+            const isSameSystem = coding.system === system;
+
+            if (isTarget) return { ...coding, status: nextStatus };
+            if (nextStatus === "selected" && isSameSystem && coding.status === "selected") {
+              return { ...coding, status: "candidate" };
+            }
+            return coding;
+          })
+        };
+      })
+    );
+  }
+
+  function handleRelationStatusChange(
+    entityId: string,
+    relationType: EntityRelationType,
+    targetEntityId: string,
+    nextStatus: RelationStatus
+  ) {
+    setEntities((currentEntities) =>
+      currentEntities.map((entity) => {
+        if (entity.id !== entityId || !entity.relations) return entity;
+
+        return {
+          ...entity,
+          relations: entity.relations.map((relation) =>
+            relation.type === relationType && relation.targetEntityId === targetEntityId
+              ? { ...relation, status: nextStatus }
+              : relation
+          )
+        };
+      })
+    );
+  }
+
+  function handleEntityUpdate(
+    entityId: string,
+    updates: {
+      displayName: string;
+      type: ClinicalEntityType;
+      assertion: AssertionStatus;
+      confidence: Confidence;
+      reviewNote: string;
+    }
+  ) {
+    setEntities((currentEntities) =>
+      currentEntities.map((entity) => {
+        if (entity.id !== entityId) return entity;
+
+        return {
+          ...entity,
+          displayName: updates.displayName,
+          type: updates.type,
+          confidence: updates.confidence,
+          attributes: {
+            ...entity.attributes,
+            assertion: updates.assertion
+          },
+          review: {
+            status: "edited",
+            note: updates.reviewNote
+          }
+        };
+      })
+    );
+  }
+
+  function handleEntityReviewed(entityId: string, reviewNote: string) {
+    setEntities((currentEntities) =>
+      currentEntities.map((entity) =>
+        entity.id === entityId
+          ? {
+              ...entity,
+              review: {
+                status: "reviewed",
+                note: reviewNote
+              }
+            }
+          : entity
+      )
+    );
+  }
+
+  function handleEntityDelete(entityId: string) {
+    setEntities((currentEntities) => {
+      const nextEntities = currentEntities.filter((entity) => entity.id !== entityId);
+      if (selectedEntityId === entityId) {
+        setSelectedEntityId(nextEntities[0]?.id ?? null);
+      }
+      return nextEntities;
+    });
+  }
+
+  function handleAddSelectedEntity() {
+    if (!selectedSourceText) return;
+
+    const startOffset = text.indexOf(selectedSourceText, selectedTextRange.start);
+    const start = startOffset >= 0 ? startOffset : selectedTextRange.start;
+    const end = start + selectedSourceText.length;
+    const manualEntity: ClinicalEntity = {
+      id: `manual-${Date.now()}`,
+      canonicalName: selectedSourceText.toLowerCase(),
+      displayName: selectedSourceText,
+      type: manualEntityType,
+      specialties: [specialty],
+      mentions: [
+        {
+          text: selectedSourceText,
+          start,
+          end,
+          sentence: findContainingSentence(text, start, end),
+          section: getSectionForOffset(sections, start)?.normalizedName
+        }
+      ],
+      attributes: {
+        assertion: "present",
+        normalizedTerm: selectedSourceText.toLowerCase()
+      },
+      confidence: "medium",
+      explanation: "Added manually by reviewer from selected source text.",
+      review: {
+        status: "manual"
+      }
+    };
+
+    setEntities((currentEntities) => currentEntities.concat(manualEntity));
+    setSelectedEntityId(manualEntity.id);
+    setHasExtracted(true);
+  }
+
+  return (
+    <main className="prototype-shell">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">Clinical text prototype</p>
+          <h1>Structured entity extraction workbench</h1>
+        </div>
+        <div className="topbar-metrics" aria-label="Extraction summary">
+          <div>
+            <span>{entities.length}</span>
+            entities
+          </div>
+          <div>
+            <span>{selectedCodingCount}</span>
+            selected codes
+          </div>
+          <div>
+            <span>{reviewedEntityCount}</span>
+            reviewed
+          </div>
+          <div>
+            <span>{highPriorityCount}</span>
+            high priority
+          </div>
+          <div>
+            <span>{relationCount}</span>
+            links
+          </div>
+          <div>
+            <span>{specialtyLabels[specialty]}</span>
+            context
+          </div>
+        </div>
+      </header>
+
+      <section className="workspace-grid">
+        <section className="note-panel" aria-label="Clinical note input">
+          <div className="panel-heading">
+            <div>
+              <h2>Source note</h2>
+              <p>Paste rough clinical shorthand, then extract local structured entities.</p>
+            </div>
+            <Activity size={20} aria-hidden="true" />
+          </div>
+
+          <SpecialtySelector value={specialty} onChange={setSpecialty} />
+
+          <div className="example-row" aria-label="Example notes">
+            {(Object.keys(sampleInputs) as Specialty[]).map((key) => (
+              <button className="ghost-button" key={key} type="button" onClick={() => loadExample(key)}>
+                {specialtyLabels[key]}
+              </button>
+            ))}
+          </div>
+
+          <ClinicalTextInput value={text} onChange={handleTextChange} onSelectionChange={(start, end) => setSelectedTextRange({ start, end })} />
+
+          <div className="manual-entity-bar" aria-label="Manual entity add">
+            <select
+              aria-label="Manual entity type"
+              value={manualEntityType}
+              onChange={(event) => setManualEntityType(event.target.value as ClinicalEntityType)}
+            >
+              <option value="problem">problem</option>
+              <option value="symptom">symptom</option>
+              <option value="finding">finding</option>
+              <option value="medication">medication</option>
+              <option value="lab">lab</option>
+              <option value="vital">vital</option>
+              <option value="score">score</option>
+              <option value="plan">plan</option>
+              <option value="risk">risk</option>
+              <option value="other">other</option>
+            </select>
+            <button className="ghost-button" type="button" onClick={handleAddSelectedEntity} disabled={!selectedSourceText}>
+              Add selected entity
+            </button>
+          </div>
+
+          <div className="case-session-bar" aria-label="Case session">
+            <button className="secondary-button" type="button" onClick={handleSaveSession} disabled={!entities.length}>
+              <Save size={15} aria-hidden="true" />
+              Save session
+            </button>
+            <button className="secondary-button" type="button" onClick={handleRestoreSession} disabled={!savedSession}>
+              <RotateCcw size={15} aria-hidden="true" />
+              Restore latest
+            </button>
+            <button className="danger-button" type="button" onClick={handleClearSavedSession} disabled={!savedSession}>
+              <Trash2 size={15} aria-hidden="true" />
+              Clear saved
+            </button>
+            <span>{savedSession ? `Saved ${formatSavedAt(savedSession.savedAt)}` : "No saved session"}</span>
+          </div>
+
+          <button className="extract-button" type="button" onClick={handleExtract}>
+            <Sparkles size={18} aria-hidden="true" />
+            Extract entities
+          </button>
+
+          <EvalLabPanel onLoadFixture={loadEvalFixture} />
+        </section>
+
+        <section className="review-panel" aria-label="Extraction review">
+          <div className="panel-heading">
+            <div>
+              <h2>Source spans</h2>
+              <p>Matched text remains linked to the structured entity.</p>
+            </div>
+            <ClipboardList size={20} aria-hidden="true" />
+          </div>
+
+          <div className="section-strip" aria-label="Detected sections">
+            {sections
+              .filter((section) => text.slice(section.start, section.end).trim())
+              .map((section) => (
+                <span key={section.id}>{getSectionLabel(section.normalizedName)}</span>
+              ))}
+          </div>
+
+          <HighlightedClinicalText
+            text={text}
+            entities={entities}
+            selectedEntityId={selectedEntityId}
+            onSelectEntity={setSelectedEntityId}
+          />
+
+          <ExtractedEntityPanel
+            entities={entities}
+            hasExtracted={hasExtracted}
+            selectedEntityId={selectedEntityId}
+            onSelectEntity={setSelectedEntityId}
+          />
+
+          {entities.length > 0 && <DocumentOutputPanel text={text} specialty={specialty} entities={entities} />}
+        </section>
+
+        <EntityDetailPanel
+          entity={selectedEntity}
+          onCodingStatusChange={handleCodingStatusChange}
+          onEntityDelete={handleEntityDelete}
+          onEntityReviewed={handleEntityReviewed}
+          onEntityUpdate={handleEntityUpdate}
+          onRelationStatusChange={handleRelationStatusChange}
+        />
+      </section>
+    </main>
+  );
+}
+
+function findContainingSentence(text: string, start: number, end: number) {
+  const sentenceStart = Math.max(text.lastIndexOf(".", start - 1), text.lastIndexOf("\n", start - 1), 0);
+  const sentenceEndCandidates = [text.indexOf(".", end), text.indexOf("\n", end)].filter((index) => index >= 0);
+  const sentenceEnd = sentenceEndCandidates.length ? Math.min(...sentenceEndCandidates) + 1 : text.length;
+  return text.slice(sentenceStart === 0 ? 0 : sentenceStart + 1, sentenceEnd).trim();
+}
+
+function formatSavedAt(savedAt: string) {
+  const date = new Date(savedAt);
+  if (Number.isNaN(date.getTime())) return "recently";
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
