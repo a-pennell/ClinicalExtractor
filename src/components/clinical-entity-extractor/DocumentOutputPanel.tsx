@@ -1,5 +1,11 @@
-import { Copy, Download } from "lucide-react";
-import { buildExtractionSession, buildFhirBundle } from "../../lib/clinical-extraction/documentOutput";
+import { useState } from "react";
+import { Copy, Download, FileText, Share2 } from "lucide-react";
+import {
+  buildClipboardSummary,
+  buildExtractionSession,
+  buildFhirBundle,
+  buildReviewerReport
+} from "../../lib/clinical-extraction/documentOutput";
 import type { ClinicalEntity, Specialty } from "../../lib/clinical-extraction/types";
 
 type DocumentOutputPanelProps = {
@@ -9,18 +15,33 @@ type DocumentOutputPanelProps = {
 };
 
 export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutputPanelProps) {
+  const [copyStatus, setCopyStatus] = useState("");
   const session = buildExtractionSession(text, specialty, entities);
   const bundle = buildFhirBundle(entities);
+  const reviewerReport = buildReviewerReport(text, specialty, entities);
+  const clipboardSummary = buildClipboardSummary(entities);
   const sessionJson = JSON.stringify(session, null, 2);
   const bundleJson = JSON.stringify(bundle, null, 2);
   const typeEntries = Object.entries(session.summary.byType).sort(([a], [b]) => a.localeCompare(b));
+  const usedTerminologySystems = session.terminology.systems.filter(
+    (system) => system.candidateCount > 0 || system.selectedCount > 0
+  );
 
-  function copySessionJson() {
-    void navigator.clipboard?.writeText(sessionJson);
+  function copyText(label: string, contents: string) {
+    void navigator.clipboard?.writeText(contents);
+    setCopyStatus(`${label} copied`);
   }
 
-  function downloadSessionJson() {
-    downloadJson("clinical-entity-session.json", sessionJson);
+  function shareReport() {
+    if (!navigator.share) {
+      copyText("Review report", reviewerReport);
+      return;
+    }
+
+    void navigator.share({
+      title: "Clinical Entity Extraction Review",
+      text: reviewerReport
+    });
   }
 
   return (
@@ -61,16 +82,53 @@ export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutpu
             ))}
           </div>
         )}
-        <div className="review-actions">
-          <button className="secondary-button" type="button" onClick={copySessionJson}>
+        <div className="terminology-manifest">
+          <strong>
+            {session.terminology.provider.label} · {session.terminology.provider.contentVersion}
+          </strong>
+          <div>
+            {usedTerminologySystems.length ? (
+              usedTerminologySystems.map((system) => (
+                <span key={system.system}>
+                  {system.system} {system.version}: {system.candidateCount} candidates
+                </span>
+              ))
+            ) : (
+              <span>No terminology candidates in this extraction.</span>
+            )}
+          </div>
+        </div>
+        <div className="review-actions export-actions" aria-label="Export and share actions">
+          <button className="secondary-button" type="button" onClick={() => copyText("Session JSON", sessionJson)}>
             <Copy size={15} aria-hidden="true" />
             Copy JSON
           </button>
-          <button className="secondary-button" type="button" onClick={downloadSessionJson}>
+          <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-session.json", sessionJson, "application/json")}>
             <Download size={15} aria-hidden="true" />
             Download JSON
           </button>
+          <button className="secondary-button" type="button" onClick={() => copyText("FHIR bundle", bundleJson)}>
+            <Copy size={15} aria-hidden="true" />
+            Copy FHIR
+          </button>
+          <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-fhir-bundle.json", bundleJson, "application/json")}>
+            <Download size={15} aria-hidden="true" />
+            Download FHIR
+          </button>
+          <button className="secondary-button" type="button" onClick={() => copyText("Entity summary", clipboardSummary)}>
+            <FileText size={15} aria-hidden="true" />
+            Copy summary
+          </button>
+          <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-review.md", reviewerReport, "text/markdown")}>
+            <Download size={15} aria-hidden="true" />
+            Download report
+          </button>
+          <button className="secondary-button" type="button" onClick={shareReport}>
+            <Share2 size={15} aria-hidden="true" />
+            Share report
+          </button>
         </div>
+        {copyStatus && <p className="copy-status" role="status">{copyStatus}</p>}
         <details className="json-disclosure">
           <summary>Session JSON</summary>
           <pre>{sessionJson}</pre>
@@ -84,8 +142,8 @@ export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutpu
   );
 }
 
-function downloadJson(filename: string, contents: string) {
-  const blob = new Blob([contents], { type: "application/json" });
+function downloadFile(filename: string, contents: string, type: string) {
+  const blob = new Blob([contents], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

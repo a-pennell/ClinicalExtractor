@@ -53,7 +53,7 @@ describe("ClinicalEntityExtractorPrototype", () => {
   it("lets reviewers delete false positive entities", () => {
     render(<ClinicalEntityExtractorPrototype />);
 
-    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(screen.queryAllByText("Hypertension")).toHaveLength(0);
   });
@@ -82,6 +82,10 @@ describe("ClinicalEntityExtractorPrototype", () => {
     expect(screen.getByText("FHIR Bundle")).toBeTruthy();
     expect(screen.getByRole("button", { name: /copy json/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /download json/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /copy fhir/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /download fhir/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /download report/i })).toBeTruthy();
+    expect(screen.getAllByText(/prototype-2026-06/i).length).toBeGreaterThan(0);
   });
 
   it("saves and restores the latest extraction session locally", () => {

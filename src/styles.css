@@ -301,6 +301,17 @@ select:focus,
   line-height: 1.35;
 }
 
+.session-select {
+  max-width: 220px;
+  min-height: 34px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 0 9px;
+  background: #f0eee8;
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
 .manual-entity-bar select,
 .review-field input,
 .review-field select,
@@ -778,6 +789,47 @@ dd {
   background: rgba(38, 114, 96, 0.09);
   color: var(--scrub-green-dark);
   font-size: 0.72rem;
+  font-weight: 760;
+}
+
+.terminology-manifest {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #f6f3ee;
+}
+
+.terminology-manifest strong {
+  font-size: 0.82rem;
+}
+
+.terminology-manifest div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.terminology-manifest span {
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: rgba(53, 111, 146, 0.1);
+  color: var(--ordered-blue);
+  font-size: 0.71rem;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.export-actions {
+  margin-top: 8px;
+}
+
+.copy-status {
+  margin: 8px 0 0;
+  color: var(--scrub-green-dark);
+  font-size: 0.76rem;
   font-weight: 760;
 }
 

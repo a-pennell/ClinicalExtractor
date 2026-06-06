@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, ClipboardList, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { extractClinicalEntityDocument } from "../../lib/clinical-extraction/extractClinicalEntities";
 import type { EvaluationFixture } from "../../lib/clinical-extraction/evaluationFixtures";
@@ -6,8 +6,12 @@ import { sampleInputs } from "../../lib/clinical-extraction/sampleInputs";
 import { detectClinicalSections, getSectionForOffset, getSectionLabel } from "../../lib/clinical-extraction/sectionParser";
 import {
   clearLatestSession,
+  deleteSavedSession,
+  listSavedSessions,
   loadLatestSession,
+  loadSavedSession,
   saveLatestSession,
+  saveSessionToLibrary,
   type SavedExtractionSession
 } from "../../lib/clinical-extraction/sessionPersistence";
 import { specialtyLabels } from "../../lib/clinical-extraction/specialtyProfiles";
@@ -43,6 +47,13 @@ export function ClinicalEntityExtractorPrototype() {
   const [selectedTextRange, setSelectedTextRange] = useState({ start: 0, end: 0 });
   const [manualEntityType, setManualEntityType] = useState<ClinicalEntityType>("problem");
   const [savedSession, setSavedSession] = useState<SavedExtractionSession | null>(() => loadLatestSession());
+  const [savedSessions, setSavedSessions] = useState<SavedExtractionSession[]>([]);
+  const [selectedSavedSessionId, setSelectedSavedSessionId] = useState("");
+
+  useEffect(() => {
+    if (!globalThis.indexedDB) return;
+    void refreshSavedSessions();
+  }, []);
 
   const selectedEntity = useMemo(
     () => entities.find((entity) => entity.id === selectedEntityId) ?? null,
@@ -103,13 +114,35 @@ export function ClinicalEntityExtractorPrototype() {
     setHasExtracted(true);
   }
 
-  function handleSaveSession() {
-    if (!entities.length) return;
-    setSavedSession(saveLatestSession(text, specialty, entities));
+  async function refreshSavedSessions() {
+    const sessions = await listSavedSessions();
+    setSavedSessions(sessions);
+    setSelectedSavedSessionId((currentId) => currentId || sessions[0]?.id || "");
   }
 
-  function handleRestoreSession() {
-    const latest = loadLatestSession();
+  async function handleSaveSession() {
+    if (!entities.length) return;
+    const latest = saveLatestSession(text, specialty, entities);
+    setSavedSession(latest);
+
+    if (!globalThis.indexedDB) return;
+
+    try {
+      const librarySession = await saveSessionToLibrary(text, specialty, entities);
+      setSavedSessions((currentSessions) => [
+        librarySession,
+        ...currentSessions.filter((session) => session.id !== librarySession.id)
+      ]);
+      setSelectedSavedSessionId(librarySession.id);
+    } catch {
+      setSavedSessions([]);
+      setSelectedSavedSessionId("");
+    }
+  }
+
+  async function handleRestoreSession() {
+    const session = selectedSavedSessionId ? await loadSavedSession(selectedSavedSessionId) : loadLatestSession();
+    const latest = session ?? loadLatestSession();
     if (!latest) return;
 
     setSavedSession(latest);
@@ -120,7 +153,18 @@ export function ClinicalEntityExtractorPrototype() {
     setHasExtracted(true);
   }
 
-  function handleClearSavedSession() {
+  async function handleClearSavedSession() {
+    if (selectedSavedSessionId) {
+      try {
+        await deleteSavedSession(selectedSavedSessionId);
+      } catch {
+        // Keep localStorage cleanup available even if IndexedDB is unavailable.
+      }
+      const nextSessions = savedSessions.filter((session) => session.id !== selectedSavedSessionId);
+      setSavedSessions(nextSessions);
+      setSelectedSavedSessionId(nextSessions[0]?.id ?? "");
+    }
+
     clearLatestSession();
     setSavedSession(null);
   }
@@ -349,19 +393,47 @@ export function ClinicalEntityExtractorPrototype() {
           </div>
 
           <div className="case-session-bar" aria-label="Case session">
-            <button className="secondary-button" type="button" onClick={handleSaveSession} disabled={!entities.length}>
+            <button className="secondary-button" type="button" onClick={() => void handleSaveSession()} disabled={!entities.length}>
               <Save size={15} aria-hidden="true" />
               Save session
             </button>
-            <button className="secondary-button" type="button" onClick={handleRestoreSession} disabled={!savedSession}>
+            {savedSessions.length > 0 && (
+              <select
+                aria-label="Saved session"
+                className="session-select"
+                value={selectedSavedSessionId}
+                onChange={(event) => setSelectedSavedSessionId(event.target.value)}
+              >
+                {savedSessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => void handleRestoreSession()}
+              disabled={!savedSession && !savedSessions.length}
+            >
               <RotateCcw size={15} aria-hidden="true" />
               Restore latest
             </button>
-            <button className="danger-button" type="button" onClick={handleClearSavedSession} disabled={!savedSession}>
+            <button
+              className="danger-button"
+              type="button"
+              onClick={() => void handleClearSavedSession()}
+              disabled={!savedSession && !savedSessions.length}
+            >
               <Trash2 size={15} aria-hidden="true" />
-              Clear saved
+              Delete saved
             </button>
-            <span>{savedSession ? `Saved ${formatSavedAt(savedSession.savedAt)}` : "No saved session"}</span>
+            <span>
+              {savedSession
+                ? `Saved ${formatSavedAt(savedSession.savedAt)} · ${savedSessions.length} in browser library`
+                : "No saved session"}
+            </span>
           </div>
 
           <button className="extract-button" type="button" onClick={handleExtract}>

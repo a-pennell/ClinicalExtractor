@@ -10,7 +10,18 @@ export type TerminologyLookup = {
   lookupCandidates: (input: TerminologyLookupInput) => CandidateCoding[];
 };
 
-const FY_2026_ICD_10_CM = "FY2026";
+export const TERMINOLOGY_CONTENT_VERSION = "prototype-2026-06";
+
+export const TERMINOLOGY_SYSTEM_VERSIONS = {
+  "ICD-10-CM": "FY2026",
+  "SNOMED-CT": "local prototype map; release not pinned",
+  LOINC: "local prototype map; release not pinned",
+  RxNorm: "local prototype map; release not pinned",
+  CPT: "local prototype map; release not pinned",
+  HCPCS: "local prototype map; release not pinned"
+} as const;
+
+const FY_2026_ICD_10_CM = TERMINOLOGY_SYSTEM_VERSIONS["ICD-10-CM"];
 
 const terminologyByCanonicalName: Record<string, CandidateCoding[]> = {
   hypertension: [
