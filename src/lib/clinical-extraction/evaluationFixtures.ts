@@ -1,5 +1,5 @@
 import { extractClinicalEntities } from "./extractClinicalEntities";
-import type { Specialty } from "./types";
+import type { AssertionStatus, ClinicalEntityType, Specialty, TerminologySystem } from "./types";
 
 export type EvaluationFixture = {
   id: string;
@@ -25,6 +25,33 @@ export type EvaluationResult = {
   totalExpected: number;
   totalMatched: number;
   recall: number;
+};
+
+export type CoverageMetricRow<T extends string> = {
+  key: T;
+  expectedCount?: number;
+  matchedCount?: number;
+  missedCount?: number;
+  extraCount?: number;
+  foundCount?: number;
+  codedEntityCount?: number;
+  candidateCount?: number;
+  selectedCount?: number;
+  recall?: number;
+};
+
+export type EvaluationCoverageDashboard = {
+  totalNotes: number;
+  totalExpected: number;
+  totalMatched: number;
+  totalMissed: number;
+  totalExtra: number;
+  recall: number;
+  bySpecialty: CoverageMetricRow<Specialty>[];
+  byEntityType: CoverageMetricRow<ClinicalEntityType>[];
+  byAssertion: CoverageMetricRow<AssertionStatus>[];
+  byTerminologySystem: CoverageMetricRow<TerminologySystem>[];
+  noteHotspots: EvaluationCaseResult[];
 };
 
 export type CoverageBacklogItem = {
@@ -344,6 +371,141 @@ export function buildCoverageBacklog(result: EvaluationResult): CoverageBacklogI
       canonicalName
     }))
   );
+}
+
+export function buildEvaluationCoverageDashboard(fixtures: EvaluationFixture[] = evaluationFixtures): EvaluationCoverageDashboard {
+  const result = evaluateExtractionFixtures(fixtures);
+  const extractionRows = fixtures.map((fixture) => ({
+    fixture,
+    entities: extractClinicalEntities(fixture.text, { specialty: fixture.specialty })
+  }));
+  const totalMissed = result.caseResults.reduce((sum, caseResult) => sum + caseResult.missedCanonicalNames.length, 0);
+  const totalExtra = result.caseResults.reduce((sum, caseResult) => sum + caseResult.extraCanonicalNames.length, 0);
+
+  return {
+    totalNotes: fixtures.length,
+    totalExpected: result.totalExpected,
+    totalMatched: result.totalMatched,
+    totalMissed,
+    totalExtra,
+    recall: result.recall,
+    bySpecialty: buildSpecialtyRows(result),
+    byEntityType: buildEntityTypeRows(extractionRows),
+    byAssertion: buildAssertionRows(extractionRows),
+    byTerminologySystem: buildTerminologyRows(extractionRows),
+    noteHotspots: result.caseResults
+      .filter((caseResult) => caseResult.missedCanonicalNames.length || caseResult.extraCanonicalNames.length)
+      .sort((a, b) => {
+        const bGap = b.missedCanonicalNames.length + b.extraCanonicalNames.length;
+        const aGap = a.missedCanonicalNames.length + a.extraCanonicalNames.length;
+        return bGap - aGap || a.id.localeCompare(b.id);
+      })
+  };
+}
+
+function buildSpecialtyRows(result: EvaluationResult): CoverageMetricRow<Specialty>[] {
+  const rows = emptySpecialtyRows();
+
+  result.caseResults.forEach((caseResult) => {
+    const row = rows[caseResult.specialty];
+    row.expectedCount = (row.expectedCount ?? 0) + caseResult.expectedCount;
+    row.matchedCount = (row.matchedCount ?? 0) + caseResult.matchedCount;
+    row.missedCount = (row.missedCount ?? 0) + caseResult.missedCanonicalNames.length;
+    row.extraCount = (row.extraCount ?? 0) + caseResult.extraCanonicalNames.length;
+  });
+
+  return Object.values(rows).map((row) => ({
+    ...row,
+    recall: row.expectedCount ? (row.matchedCount ?? 0) / row.expectedCount : 1
+  }));
+}
+
+function buildEntityTypeRows(
+  extractionRows: { entities: ReturnType<typeof extractClinicalEntities> }[]
+): CoverageMetricRow<ClinicalEntityType>[] {
+  const rows = new Map<ClinicalEntityType, CoverageMetricRow<ClinicalEntityType>>();
+
+  extractionRows.forEach(({ entities }) => {
+    entities.forEach((entity) => {
+      const row = getMetricRow(rows, entity.type);
+      row.foundCount = (row.foundCount ?? 0) + 1;
+      if (entity.codings?.length) row.codedEntityCount = (row.codedEntityCount ?? 0) + 1;
+    });
+  });
+
+  return sortRows(Array.from(rows.values()));
+}
+
+function buildAssertionRows(
+  extractionRows: { entities: ReturnType<typeof extractClinicalEntities> }[]
+): CoverageMetricRow<AssertionStatus>[] {
+  const rows = new Map<AssertionStatus, CoverageMetricRow<AssertionStatus>>();
+
+  extractionRows.forEach(({ entities }) => {
+    entities.forEach((entity) => {
+      const assertion = entity.attributes?.assertion ?? "present";
+      const row = getMetricRow(rows, assertion);
+      row.foundCount = (row.foundCount ?? 0) + 1;
+    });
+  });
+
+  return sortRows(Array.from(rows.values()));
+}
+
+function buildTerminologyRows(
+  extractionRows: { entities: ReturnType<typeof extractClinicalEntities> }[]
+): CoverageMetricRow<TerminologySystem>[] {
+  const rows = new Map<TerminologySystem, CoverageMetricRow<TerminologySystem>>();
+
+  extractionRows.forEach(({ entities }) => {
+    entities.forEach((entity) => {
+      const systemsForEntity = new Set<TerminologySystem>();
+      entity.codings?.forEach((coding) => {
+        const row = getMetricRow(rows, coding.system);
+        row.candidateCount = (row.candidateCount ?? 0) + 1;
+        if (coding.status === "selected") row.selectedCount = (row.selectedCount ?? 0) + 1;
+        systemsForEntity.add(coding.system);
+      });
+      systemsForEntity.forEach((system) => {
+        const row = getMetricRow(rows, system);
+        row.codedEntityCount = (row.codedEntityCount ?? 0) + 1;
+      });
+    });
+  });
+
+  return sortRows(Array.from(rows.values()));
+}
+
+function emptySpecialtyRows() {
+  return {
+    "primary-care": { key: "primary-care", expectedCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 },
+    "mental-health": { key: "mental-health", expectedCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 },
+    "physical-therapy": {
+      key: "physical-therapy",
+      expectedCount: 0,
+      matchedCount: 0,
+      missedCount: 0,
+      extraCount: 0
+    },
+    mixed: { key: "mixed", expectedCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 }
+  } satisfies Record<Specialty, CoverageMetricRow<Specialty>>;
+}
+
+function getMetricRow<T extends string>(rows: Map<T, CoverageMetricRow<T>>, key: T) {
+  const existing = rows.get(key);
+  if (existing) return existing;
+
+  const row: CoverageMetricRow<T> = { key };
+  rows.set(key, row);
+  return row;
+}
+
+function sortRows<T extends string>(rows: CoverageMetricRow<T>[]) {
+  return rows.sort((a, b) => {
+    const bCount = b.foundCount ?? b.candidateCount ?? b.expectedCount ?? 0;
+    const aCount = a.foundCount ?? a.candidateCount ?? a.expectedCount ?? 0;
+    return bCount - aCount || a.key.localeCompare(b.key);
+  });
 }
 
 function uniqueSorted(values: string[]) {

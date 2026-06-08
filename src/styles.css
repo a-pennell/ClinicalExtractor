@@ -444,6 +444,118 @@ select:focus,
   font-size: 1rem;
 }
 
+.coverage-dashboard {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  margin: 0 0 12px;
+  padding: 11px;
+  background: #f6f3ee;
+}
+
+.coverage-dashboard-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.coverage-dashboard h3,
+.coverage-bar-section h3,
+.coverage-hotspots h3 {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.coverage-dashboard-header span {
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 760;
+}
+
+.coverage-table {
+  display: grid;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--exam-raised);
+}
+
+.coverage-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) 58px 54px 48px;
+  gap: 6px;
+  min-height: 31px;
+  align-items: center;
+  border-top: 1px solid var(--line-soft);
+  padding: 6px 8px;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+}
+
+.coverage-row:first-child {
+  border-top: 0;
+}
+
+.coverage-row span:not(:first-child) {
+  text-align: right;
+}
+
+.coverage-row-header {
+  background: rgba(38, 114, 96, 0.08);
+  color: var(--scrub-green-dark);
+  font-weight: 780;
+}
+
+.coverage-bar-section {
+  display: grid;
+  gap: 7px;
+}
+
+.coverage-bars {
+  display: grid;
+  gap: 7px;
+}
+
+.coverage-bar-row {
+  display: grid;
+  gap: 4px;
+}
+
+.coverage-bar-row div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+}
+
+.coverage-bar-row strong {
+  color: var(--ink);
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.coverage-bar-track {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(122, 117, 108, 0.13);
+  overflow: hidden;
+}
+
+.coverage-bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--scrub-green);
+}
+
+.coverage-hotspots {
+  display: grid;
+  gap: 7px;
+}
+
 .eval-filter-row {
   display: flex;
   flex-wrap: wrap;

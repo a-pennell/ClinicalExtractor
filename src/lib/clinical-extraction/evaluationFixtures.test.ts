@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateExtractionFixtures, evaluationFixtures } from "./evaluationFixtures";
+import { buildEvaluationCoverageDashboard, evaluateExtractionFixtures, evaluationFixtures } from "./evaluationFixtures";
 import type { Specialty } from "./types";
 
 describe("evaluationFixtures", () => {
@@ -28,5 +28,18 @@ describe("evaluationFixtures", () => {
     expect(result.totalExpected).toBeGreaterThan(100);
     expect(result.recall).toBeGreaterThanOrEqual(0.9);
     expect(result.caseResults.flatMap((caseResult) => caseResult.missedCanonicalNames)).toEqual([]);
+  });
+
+  it("builds dashboard coverage by specialty, type, assertion, and terminology system", () => {
+    const dashboard = buildEvaluationCoverageDashboard();
+
+    expect(dashboard.totalNotes).toBe(20);
+    expect(dashboard.totalExpected).toBeGreaterThan(100);
+    expect(dashboard.totalMissed).toBe(0);
+    expect(dashboard.bySpecialty).toHaveLength(4);
+    expect(dashboard.bySpecialty.every((row) => row.recall === 1)).toBe(true);
+    expect(dashboard.byEntityType.some((row) => row.key === "problem" && (row.foundCount ?? 0) > 0)).toBe(true);
+    expect(dashboard.byAssertion.some((row) => row.key === "absent" && (row.foundCount ?? 0) > 0)).toBe(true);
+    expect(dashboard.byTerminologySystem.some((row) => row.key === "ICD-10-CM" && (row.candidateCount ?? 0) > 0)).toBe(true);
   });
 });

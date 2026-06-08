@@ -106,6 +106,10 @@ describe("ClinicalEntityExtractorPrototype", () => {
   it("loads synthetic eval notes from the eval lab", () => {
     render(<ClinicalEntityExtractorPrototype />);
 
+    expect(screen.getByText("Coverage dashboard")).toBeTruthy();
+    expect(screen.getByText("Entity mix")).toBeTruthy();
+    expect(screen.getByText("Terminology")).toBeTruthy();
+
     fireEvent.change(screen.getByLabelText("Eval note"), {
       target: { value: "mixed-diabetes-depression" }
     });

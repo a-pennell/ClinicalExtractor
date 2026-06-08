@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { FlaskConical, ListChecks } from "lucide-react";
 import {
   buildCoverageBacklog,
+  buildEvaluationCoverageDashboard,
   evaluateFixture,
   evaluateExtractionFixtures,
   evaluationFixtures,
@@ -28,6 +29,7 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
   const overallResult = useMemo(() => evaluateExtractionFixtures(evaluationFixtures), []);
   const selectedResult = selectedFixture ? evaluateFixture(selectedFixture) : null;
   const backlog = buildCoverageBacklog(overallResult);
+  const coverageDashboard = useMemo(() => buildEvaluationCoverageDashboard(evaluationFixtures), []);
 
   function handleFilterChange(nextFilter: Specialty | "all") {
     setFilter(nextFilter);
@@ -61,6 +63,71 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
           coverage gaps
         </div>
       </div>
+
+      <section className="coverage-dashboard" aria-label="Coverage dashboard">
+        <div className="coverage-dashboard-header">
+          <h3>Coverage dashboard</h3>
+          <span>
+            {coverageDashboard.totalMatched}/{coverageDashboard.totalExpected} expected · {coverageDashboard.totalExtra} extra
+          </span>
+        </div>
+
+        <div className="coverage-table" role="table" aria-label="Recall by specialty">
+          <div className="coverage-row coverage-row-header" role="row">
+            <span>Context</span>
+            <span>Recall</span>
+            <span>Missed</span>
+            <span>Extra</span>
+          </div>
+          {coverageDashboard.bySpecialty.map((row) => (
+            <div className="coverage-row" role="row" key={row.key}>
+              <span>{specialtyLabels[row.key]}</span>
+              <span>{Math.round((row.recall ?? 0) * 100)}%</span>
+              <span>{row.missedCount ?? 0}</span>
+              <span>{row.extraCount ?? 0}</span>
+            </div>
+          ))}
+        </div>
+
+        <CoverageBarList
+          title="Entity mix"
+          rows={coverageDashboard.byEntityType.slice(0, 7).map((row) => ({
+            label: row.key.replace(/-/g, " "),
+            value: row.foundCount ?? 0,
+            sublabel: `${row.codedEntityCount ?? 0} coded`
+          }))}
+        />
+
+        <CoverageBarList
+          title="Assertion mix"
+          rows={coverageDashboard.byAssertion.map((row) => ({
+            label: row.key.replace(/-/g, " "),
+            value: row.foundCount ?? 0
+          }))}
+        />
+
+        <CoverageBarList
+          title="Terminology"
+          rows={coverageDashboard.byTerminologySystem.map((row) => ({
+            label: row.key,
+            value: row.candidateCount ?? 0,
+            sublabel: `${row.codedEntityCount ?? 0} entities`
+          }))}
+        />
+
+        {coverageDashboard.noteHotspots.length > 0 && (
+          <section className="coverage-hotspots">
+            <h3>Review hotspots</h3>
+            <div className="eval-token-list">
+              {coverageDashboard.noteHotspots.slice(0, 5).map((caseResult) => (
+                <span className="eval-token warning" key={caseResult.id}>
+                  {caseResult.id} · {caseResult.missedCanonicalNames.length} missed · {caseResult.extraCanonicalNames.length} extra
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+      </section>
 
       <div className="eval-filter-row" aria-label="Eval context filter">
         {filterOptions.map((option) => (
@@ -132,6 +199,42 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
           <p>No expected-entity misses in the synthetic set.</p>
         )}
       </section>
+    </section>
+  );
+}
+
+function CoverageBarList({
+  title,
+  rows
+}: {
+  title: string;
+  rows: { label: string; value: number; sublabel?: string }[];
+}) {
+  const maxValue = Math.max(...rows.map((row) => row.value), 1);
+
+  return (
+    <section className="coverage-bar-section">
+      <h3>{title}</h3>
+      <div className="coverage-bars">
+        {rows.length ? (
+          rows.map((row) => (
+            <div className="coverage-bar-row" key={row.label}>
+              <div>
+                <span>{row.label}</span>
+                <strong>
+                  {row.value}
+                  {row.sublabel ? ` · ${row.sublabel}` : ""}
+                </strong>
+              </div>
+              <div className="coverage-bar-track" aria-hidden="true">
+                <span style={{ width: `${Math.max((row.value / maxValue) * 100, 4)}%` }} />
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No coverage rows yet.</p>
+        )}
+      </div>
     </section>
   );
 }
