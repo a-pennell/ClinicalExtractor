@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractClinicalEntities } from "./extractClinicalEntities";
+import { extractClinicalEntities, extractClinicalEntityDocument } from "./extractClinicalEntities";
 
 describe("extractClinicalEntities", () => {
   it("normalizes primary care shorthand and marks denied symptoms absent", () => {
@@ -309,5 +309,20 @@ describe("extractClinicalEntities", () => {
     );
     expect(entities.find((entity) => entity.canonicalName === "straight leg raise")?.type).toBe("special-test");
     expect(entities.find((entity) => entity.canonicalName === "Timed Up and Go")?.attributes?.value).toBe("13");
+  });
+
+  it("auto-detects mixed clinical context without a selected specialty", () => {
+    const document = extractClinicalEntityDocument(
+      "T2DM with A1c 7.9 and major depression. PHQ-9 14. Referral to PT for ROM.",
+      { mode: "auto" }
+    );
+
+    expect(document.context.primarySpecialty).toBe("mixed");
+    expect(document.context.activeSpecialties).toEqual(
+      expect.arrayContaining(["primary-care", "mental-health", "physical-therapy"])
+    );
+    expect(document.entities.find((entity) => entity.canonicalName === "type 2 diabetes mellitus")).toBeTruthy();
+    expect(document.entities.find((entity) => entity.canonicalName === "major depressive disorder")).toBeTruthy();
+    expect(document.entities.find((entity) => entity.canonicalName === "referral to physical therapy")).toBeTruthy();
   });
 });

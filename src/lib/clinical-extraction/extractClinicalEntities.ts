@@ -1,10 +1,11 @@
 import { entityPatterns } from "./abbreviationDictionaries";
+import { detectClinicalContext, resolveExtractionSpecialties } from "./clinicalContext";
 import { dedupeEntities } from "./dedupeEntities";
 import { linkEntityRelations } from "./entityRelations";
 import { isNegated, isOrdered } from "./negationRules";
 import { detectRegexEntities } from "./regexPatterns";
 import { detectClinicalSections, getSectionForOffset } from "./sectionParser";
-import { specialtyMatches } from "./specialtyProfiles";
+import { specialtyMatchesAny } from "./specialtyProfiles";
 import { addCandidateCodings } from "./terminologyMappings";
 import { annotateEntityUncertainty } from "./uncertainty";
 import type { AssertionStatus, ClinicalEntity, ClinicalSection, EntityPattern, ExtractionOptions, Segment } from "./types";
@@ -16,14 +17,16 @@ export function extractClinicalEntities(rawText: string, options: ExtractionOpti
 export function extractClinicalEntityDocument(rawText: string, options: ExtractionOptions) {
   const text = rawText.trim();
   const sections = detectClinicalSections(rawText);
-  if (!text) return { sections, entities: [] };
+  const context = detectClinicalContext(rawText);
+  if (!text) return { sections, context, entities: [] };
 
+  const activeSpecialties = resolveExtractionSpecialties(options, context);
   const segments = splitIntoSegments(rawText, sections);
   const dictionaryEntities = entityPatterns
-    .filter((pattern) => specialtyMatches(options.specialty, pattern.specialties))
+    .filter((pattern) => specialtyMatchesAny(activeSpecialties, pattern.specialties))
     .flatMap((pattern) => detectPattern(rawText, segments, pattern));
 
-  const regexEntities = detectRegexEntities(rawText, segments, options.specialty).map((entity, index) => ({
+  const regexEntities = detectRegexEntities(rawText, segments, activeSpecialties).map((entity, index) => ({
     id: buildId(entity.type, entity.canonicalName, index + dictionaryEntities.length),
     ...entity
   }));
@@ -36,7 +39,7 @@ export function extractClinicalEntityDocument(rawText: string, options: Extracti
   );
   const entities = annotateEntityUncertainty(linkEntityRelations(codedEntities));
 
-  return { sections, entities };
+  return { sections, context, entities };
 }
 
 export function splitIntoSegments(text: string, sections: ClinicalSection[] = detectClinicalSections(text)): Segment[] {

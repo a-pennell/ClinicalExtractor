@@ -10,3 +10,7 @@ export const specialtyLabels: Record<Specialty, string> = {
 export function specialtyMatches(selected: Specialty, entitySpecialties: Specialty[]) {
   return selected === "mixed" || entitySpecialties.includes(selected) || entitySpecialties.includes("mixed");
 }
+
+export function specialtyMatchesAny(activeSpecialties: Specialty[], entitySpecialties: Specialty[]) {
+  return entitySpecialties.includes("mixed") || activeSpecialties.some((specialty) => entitySpecialties.includes(specialty));
+}

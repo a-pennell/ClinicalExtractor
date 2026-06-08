@@ -92,7 +92,7 @@ describe("ClinicalEntityExtractorPrototype", () => {
     render(<ClinicalEntityExtractorPrototype />);
 
     fireEvent.click(screen.getByRole("button", { name: /save session/i }));
-    expect(screen.getByText(/^Saved /)).toBeTruthy();
+    expect(screen.getByText("Session saved.")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Clinical text"), {
       target: { value: "" }
@@ -101,6 +101,51 @@ describe("ClinicalEntityExtractorPrototype", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /restore latest/i }));
     expect(screen.getAllByText("Hypertension").length).toBeGreaterThan(0);
+  });
+
+  it("imports an exported session JSON file", async () => {
+    render(<ClinicalEntityExtractorPrototype />);
+    const importedSession = {
+      schemaVersion: "prototype-1",
+      specialty: "mental-health",
+      specialtyLabel: "Mental Health",
+      sourceText: "Major depression. Denies SI.",
+      sections: [],
+      summary: {
+        entityCount: 2,
+        reviewedCount: 1,
+        selectedCodingCount: 0,
+        relationCount: 0,
+        highPriorityReviewCount: 0,
+        byType: { problem: 1, risk: 1 }
+      },
+      terminology: {
+        provider: { id: "local-static", label: "Local static terminology map", contentVersion: "prototype-2026-06", mode: "offline-prototype" },
+        systems: [],
+        limitations: []
+      },
+      entities: [
+        {
+          id: "problem-major-depression",
+          canonicalName: "major depressive disorder",
+          displayName: "Major depressive disorder",
+          type: "problem",
+          specialties: ["mental-health"],
+          mentions: [{ text: "Major depression", start: 0, end: 16 }],
+          attributes: { assertion: "present" },
+          confidence: "medium",
+          review: { status: "reviewed", note: "Imported review." }
+        }
+      ]
+    };
+    const file = new File([JSON.stringify(importedSession)], "session.json", { type: "application/json" });
+
+    fireEvent.change(screen.getByLabelText("Import session JSON"), {
+      target: { files: [file] }
+    });
+
+    expect(await screen.findByText("Session imported.")).toBeTruthy();
+    expect((await screen.findAllByText("Major depressive disorder")).length).toBeGreaterThan(0);
   });
 
   it("loads synthetic eval notes from the eval lab", () => {

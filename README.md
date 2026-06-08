@@ -35,6 +35,10 @@ npm start
 
 No environment variables, database, or external NLP APIs are required for the current prototype.
 
+Post-deploy checklist: [docs/deployment-smoke-test.md](docs/deployment-smoke-test.md).
+
+Backend persistence design: [docs/backend-persistence-design.md](docs/backend-persistence-design.md).
+
 ## Prototype Capabilities
 
 - Specialty contexts: Primary Care, Mental Health, Physical Therapy, and Mixed / Auto.

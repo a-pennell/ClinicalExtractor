@@ -169,7 +169,7 @@ h3 {
 
 .segmented-control {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 5px;
   margin: 0 0 12px;
   padding: 4px;
@@ -214,6 +214,64 @@ h3 {
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
+}
+
+.context-insight {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  margin: -2px 0 12px;
+  padding: 10px;
+  background: #f6f3ee;
+}
+
+.context-insight > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.context-insight > div:first-child span {
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+  text-align: right;
+}
+
+.context-score-row,
+.context-signal-row,
+.context-ambiguity-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.context-score-row span,
+.context-signal-row span,
+.context-ambiguity-row span {
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 0.71rem;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.context-score-row span {
+  background: rgba(38, 114, 96, 0.09);
+  color: var(--scrub-green-dark);
+}
+
+.context-signal-row span {
+  background: rgba(53, 111, 146, 0.1);
+  color: var(--ordered-blue);
+}
+
+.context-ambiguity-row span {
+  background: rgba(154, 106, 25, 0.13);
+  color: var(--lab-gold);
 }
 
 .ghost-button {
@@ -965,7 +1023,8 @@ dd {
 }
 
 .secondary-button,
-.danger-button {
+.danger-button,
+.file-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -987,6 +1046,20 @@ dd {
 .secondary-button {
   background: rgba(38, 114, 96, 0.1);
   color: var(--scrub-green-dark);
+}
+
+.file-button {
+  position: relative;
+  overflow: hidden;
+  background: rgba(53, 111, 146, 0.1);
+  color: var(--ordered-blue);
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  opacity: 0;
 }
 
 .danger-button {

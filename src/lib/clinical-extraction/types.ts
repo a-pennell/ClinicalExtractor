@@ -165,7 +165,23 @@ export type EntityPattern = {
 };
 
 export type ExtractionOptions = {
-  specialty: Specialty;
+  specialty?: Specialty;
+  mode?: "auto" | "override";
+};
+
+export type DetectedClinicalContext = {
+  primarySpecialty: Specialty;
+  activeSpecialties: Specialty[];
+  specialtyScores: Record<Specialty, number>;
+  noteType: "soap" | "eval" | "progress-note" | "plan" | "unknown";
+  sectionSignals: string[];
+  lexicalSignals: string[];
+  ambiguityWarnings: {
+    abbreviation: string;
+    possibleMeanings: string[];
+    chosenMeaning?: string;
+    reason?: string;
+  }[];
 };
 
 export type Segment = {

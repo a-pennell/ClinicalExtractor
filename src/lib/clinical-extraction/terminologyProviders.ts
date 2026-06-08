@@ -2,7 +2,11 @@ import { localTerminologyLookup } from "./terminologyMappings";
 import type { CandidateCoding, Specialty, TerminologySystem } from "./types";
 import type { TerminologyLookup, TerminologyLookupInput } from "./terminologyMappings";
 
-export type TerminologyProviderId = "local-static" | "mock-fhir-terminology" | "mock-async-fhir-terminology";
+export type TerminologyProviderId =
+  | "local-static"
+  | "mock-fhir-terminology"
+  | "mock-async-fhir-terminology"
+  | "fhir-terminology-service";
 
 export type TerminologyLookupRequest = TerminologyLookupInput & {
   operation?: "$lookup";
@@ -43,6 +47,12 @@ export type AsyncTerminologyProvider = {
   label: string;
   lookup: (request: TerminologyLookupRequest) => Promise<TerminologyLookupResult>;
   expand: (request: TerminologyExpandRequest) => Promise<TerminologyExpandResult>;
+};
+
+export type FhirTerminologyProviderConfig = {
+  baseUrl?: string;
+  enabled?: boolean;
+  fetchImpl?: typeof fetch;
 };
 
 export const localStaticTerminologyProvider: TerminologyProvider = {
@@ -88,6 +98,52 @@ export const mockAsyncFhirTerminologyProvider: AsyncTerminologyProvider = {
   }
 };
 
+export function createFhirTerminologyServiceProvider(
+  config: FhirTerminologyProviderConfig = {}
+): AsyncTerminologyProvider {
+  const fetchImpl = config.fetchImpl ?? globalThis.fetch;
+  const baseUrl = config.baseUrl?.replace(/\/$/, "");
+
+  return {
+    id: "fhir-terminology-service",
+    label: "FHIR Terminology service",
+    async lookup(request) {
+      if (!config.enabled || !baseUrl || !fetchImpl) {
+        return disabledFhirResult(request, "lookup");
+      }
+
+      const expandResult = await expandAgainstFhirService(
+        {
+          filter: request.canonicalName,
+          system: request.preferredSystems?.[0],
+          specialty: request.specialty,
+          limit: 8
+        },
+        baseUrl,
+        fetchImpl
+      );
+
+      return {
+        providerId: "fhir-terminology-service",
+        candidates: filterByPreferredSystems(expandResult.candidates, request.preferredSystems),
+        warnings: expandResult.warnings
+      };
+    },
+    async expand(request) {
+      if (!config.enabled || !baseUrl || !fetchImpl) {
+        return {
+          providerId: "fhir-terminology-service",
+          filter: request.filter,
+          candidates: expandMockCandidates(request),
+          warnings: ["FHIR terminology service is disabled; returned local fallback expansion candidates."]
+        };
+      }
+
+      return expandAgainstFhirService(request, baseUrl, fetchImpl);
+    }
+  };
+}
+
 export function createTerminologyLookup(provider: TerminologyProvider): TerminologyLookup {
   return {
     lookupCandidates(input) {
@@ -120,6 +176,83 @@ export function expandWithAsyncTerminologyProvider(
 function filterByPreferredSystems(candidates: CandidateCoding[], preferredSystems?: TerminologySystem[]) {
   if (!preferredSystems?.length) return candidates;
   return candidates.filter((candidate) => preferredSystems.includes(candidate.system));
+}
+
+function disabledFhirResult(request: TerminologyLookupRequest, operation: "lookup"): TerminologyLookupResult {
+  return {
+    providerId: "fhir-terminology-service",
+    candidates: filterByPreferredSystems(localTerminologyLookup.lookupCandidates(request), request.preferredSystems),
+    warnings: [`FHIR terminology service ${operation} is disabled; returned local fallback candidates.`]
+  };
+}
+
+async function expandAgainstFhirService(
+  request: TerminologyExpandRequest,
+  baseUrl: string,
+  fetchImpl: typeof fetch
+): Promise<TerminologyExpandResult> {
+  const url = new URL(`${baseUrl}/ValueSet/$expand`);
+  url.searchParams.set("filter", request.filter);
+  url.searchParams.set("count", String(request.limit ?? 10));
+  if (request.system) url.searchParams.set("system", request.system);
+  if (request.valueSetUrl) url.searchParams.set("url", request.valueSetUrl);
+
+  const response = await fetchImpl(url);
+  if (!response.ok) {
+    return {
+      providerId: "fhir-terminology-service",
+      filter: request.filter,
+      candidates: expandMockCandidates(request),
+      warnings: [`FHIR terminology service returned ${response.status}; local fallback candidates are shown.`]
+    };
+  }
+
+  const payload = (await response.json()) as FhirValueSetExpansion;
+  return {
+    providerId: "fhir-terminology-service",
+    filter: request.filter,
+    candidates: fhirExpansionToCandidates(payload, request).slice(0, request.limit ?? 10),
+    warnings: ["FHIR terminology candidates are unselected and require clinical review."]
+  };
+}
+
+type FhirValueSetExpansion = {
+  expansion?: {
+    contains?: {
+      system?: string;
+      code?: string;
+      display?: string;
+    }[];
+  };
+};
+
+function fhirExpansionToCandidates(payload: FhirValueSetExpansion, request: TerminologyExpandRequest): CandidateCoding[] {
+  return (payload.expansion?.contains ?? []).flatMap((contains) => {
+    const system = mapFhirSystemToTerminologySystem(contains.system, request.system);
+    if (!system || !contains.code || !contains.display) return [];
+    return [
+      {
+        system,
+        code: contains.code,
+        display: contains.display,
+        confidence: "low",
+        status: "candidate",
+        rationale: "Candidate returned by configured FHIR Terminology $expand service."
+      }
+    ];
+  });
+}
+
+function mapFhirSystemToTerminologySystem(systemUrl?: string, requestedSystem?: TerminologySystem): TerminologySystem | null {
+  if (requestedSystem) return requestedSystem;
+  if (!systemUrl) return null;
+  if (systemUrl.includes("icd-10-cm")) return "ICD-10-CM";
+  if (systemUrl.includes("snomed")) return "SNOMED-CT";
+  if (systemUrl.includes("loinc")) return "LOINC";
+  if (systemUrl.includes("rxnorm")) return "RxNorm";
+  if (systemUrl.includes("cpt")) return "CPT";
+  if (systemUrl.includes("hcpcs")) return "HCPCS";
+  return null;
 }
 
 function expandMockCandidates(request: TerminologyExpandRequest) {

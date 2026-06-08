@@ -1,4 +1,5 @@
 import { buildExtractionSession, type ExtractionSession } from "./documentOutput";
+import { validateExtractionSessionPayload } from "./schemaValidation";
 import type { ClinicalEntity, Specialty } from "./types";
 
 export const latestSessionStorageKey = "clinical-entity-extractor.latest-session";
@@ -37,6 +38,35 @@ export function loadLatestSession(storage: Storage = window.localStorage): Saved
 
 export function clearLatestSession(storage: Storage = window.localStorage) {
   storage.removeItem(latestSessionStorageKey);
+}
+
+export function importSavedSessionJson(
+  jsonText: string,
+  storage: Storage = window.localStorage
+) {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(jsonText);
+  } catch {
+    return { ok: false as const, errors: ["Import file is not valid JSON."], warnings: [] as string[] };
+  }
+
+  const validation = validateExtractionSessionPayload(payload);
+  if (!validation.ok) return validation;
+
+  const importedSession: SavedExtractionSession = {
+    ...validation.value,
+    id: buildSessionId(),
+    savedAt: new Date().toISOString(),
+    name: buildSessionName(validation.value.sourceText)
+  };
+  storage.setItem(latestSessionStorageKey, JSON.stringify(importedSession));
+
+  return {
+    ok: true as const,
+    value: importedSession,
+    warnings: validation.warnings
+  };
 }
 
 export async function saveSessionToLibrary(

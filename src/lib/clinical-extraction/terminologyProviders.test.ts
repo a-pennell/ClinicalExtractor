@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   expandWithAsyncTerminologyProvider,
+  createFhirTerminologyServiceProvider,
   createTerminologyLookup,
   lookupWithAsyncTerminologyProvider,
   lookupWithTerminologyProvider,
@@ -73,5 +74,46 @@ describe("terminologyProviders", () => {
     expect(result.warnings?.[0]).toContain("$expand");
     expect(result.candidates.some((coding) => coding.code === "85354-9")).toBe(true);
     expect(result.candidates.every((coding) => coding.system === "LOINC")).toBe(true);
+  });
+
+  it("keeps the FHIR terminology service provider disabled by default with local fallback", async () => {
+    const provider = createFhirTerminologyServiceProvider();
+    const result = await provider.lookup({
+      canonicalName: "hypertension",
+      type: "problem",
+      preferredSystems: ["ICD-10-CM"]
+    });
+
+    expect(result.providerId).toBe("fhir-terminology-service");
+    expect(result.warnings?.[0]).toContain("disabled");
+    expect(result.candidates[0].code).toBe("I10");
+  });
+
+  it("maps enabled FHIR ValueSet expansion responses to candidate codings", async () => {
+    const provider = createFhirTerminologyServiceProvider({
+      baseUrl: "https://terminology.example/fhir",
+      enabled: true,
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            resourceType: "ValueSet",
+            expansion: {
+              contains: [
+                {
+                  system: "http://loinc.org",
+                  code: "85354-9",
+                  display: "Blood pressure panel with all children optional"
+                }
+              ]
+            }
+          }),
+          { status: 200 }
+        )
+    });
+
+    const result = await provider.expand({ filter: "blood pressure", system: "LOINC", limit: 5 });
+
+    expect(result.providerId).toBe("fhir-terminology-service");
+    expect(result.candidates[0]).toMatchObject({ system: "LOINC", code: "85354-9" });
   });
 });

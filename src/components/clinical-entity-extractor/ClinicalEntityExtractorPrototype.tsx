@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ClipboardList, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { Activity, ClipboardList, RotateCcw, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { detectClinicalContext } from "../../lib/clinical-extraction/clinicalContext";
 import { extractClinicalEntityDocument } from "../../lib/clinical-extraction/extractClinicalEntities";
 import type { EvaluationFixture } from "../../lib/clinical-extraction/evaluationFixtures";
 import { sampleInputs } from "../../lib/clinical-extraction/sampleInputs";
@@ -7,6 +8,7 @@ import { detectClinicalSections, getSectionForOffset, getSectionLabel } from "..
 import {
   clearLatestSession,
   deleteSavedSession,
+  importSavedSessionJson,
   listSavedSessions,
   loadLatestSession,
   loadSavedSession,
@@ -38,9 +40,10 @@ const defaultText = sampleInputs["primary-care"];
 
 export function ClinicalEntityExtractorPrototype() {
   const [text, setText] = useState(defaultText);
-  const [specialty, setSpecialty] = useState<Specialty>("primary-care");
+  const [contextMode, setContextMode] = useState<"auto" | "override">("auto");
+  const [specialty, setSpecialty] = useState<Specialty>("mixed");
   const [entities, setEntities] = useState<ClinicalEntity[]>(() =>
-    extractClinicalEntityDocument(defaultText, { specialty: "primary-care" }).entities
+    extractClinicalEntityDocument(defaultText, { mode: "auto" }).entities
   );
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(entities[0]?.id ?? null);
   const [hasExtracted, setHasExtracted] = useState(true);
@@ -49,6 +52,7 @@ export function ClinicalEntityExtractorPrototype() {
   const [savedSession, setSavedSession] = useState<SavedExtractionSession | null>(() => loadLatestSession());
   const [savedSessions, setSavedSessions] = useState<SavedExtractionSession[]>([]);
   const [selectedSavedSessionId, setSelectedSavedSessionId] = useState("");
+  const [sessionMessage, setSessionMessage] = useState("");
 
   useEffect(() => {
     if (!globalThis.indexedDB) return;
@@ -60,6 +64,8 @@ export function ClinicalEntityExtractorPrototype() {
     [entities, selectedEntityId]
   );
   const sections = useMemo(() => detectClinicalSections(text), [text]);
+  const detectedContext = useMemo(() => detectClinicalContext(text), [text]);
+  const documentSpecialty = contextMode === "auto" ? detectedContext.primarySpecialty : specialty;
   const selectedCodingCount = useMemo(
     () => entities.reduce((count, entity) => count + (entity.codings?.filter((coding) => coding.status === "selected").length ?? 0), 0),
     [entities]
@@ -90,7 +96,7 @@ export function ClinicalEntityExtractorPrototype() {
   }
 
   function handleExtract() {
-    const nextEntities = extractClinicalEntityDocument(text, { specialty }).entities;
+    const nextEntities = extractClinicalEntityDocument(text, { specialty, mode: contextMode }).entities;
     setEntities(nextEntities);
     setSelectedEntityId(nextEntities[0]?.id ?? null);
     setHasExtracted(true);
@@ -98,8 +104,9 @@ export function ClinicalEntityExtractorPrototype() {
 
   function loadExample(nextSpecialty: Specialty) {
     setSpecialty(nextSpecialty);
+    setContextMode("auto");
     setText(sampleInputs[nextSpecialty]);
-    const nextEntities = extractClinicalEntityDocument(sampleInputs[nextSpecialty], { specialty: nextSpecialty }).entities;
+    const nextEntities = extractClinicalEntityDocument(sampleInputs[nextSpecialty], { mode: "auto" }).entities;
     setEntities(nextEntities);
     setSelectedEntityId(nextEntities[0]?.id ?? null);
     setHasExtracted(true);
@@ -107,8 +114,9 @@ export function ClinicalEntityExtractorPrototype() {
 
   function loadEvalFixture(fixture: EvaluationFixture) {
     setSpecialty(fixture.specialty);
+    setContextMode("auto");
     setText(fixture.text);
-    const nextEntities = extractClinicalEntityDocument(fixture.text, { specialty: fixture.specialty }).entities;
+    const nextEntities = extractClinicalEntityDocument(fixture.text, { mode: "auto" }).entities;
     setEntities(nextEntities);
     setSelectedEntityId(nextEntities[0]?.id ?? null);
     setHasExtracted(true);
@@ -124,6 +132,7 @@ export function ClinicalEntityExtractorPrototype() {
     if (!entities.length) return;
     const latest = saveLatestSession(text, specialty, entities);
     setSavedSession(latest);
+    setSessionMessage("Session saved.");
 
     if (!globalThis.indexedDB) return;
 
@@ -140,6 +149,36 @@ export function ClinicalEntityExtractorPrototype() {
     }
   }
 
+  async function handleImportSession(file: File | null) {
+    if (!file) return;
+    const result = importSavedSessionJson(await readFileText(file));
+
+    if (!result.ok) {
+      setSessionMessage(result.errors[0] ?? "Could not import session.");
+      return;
+    }
+
+    setSavedSession(result.value);
+    setText(result.value.sourceText);
+    setSpecialty(result.value.specialty);
+    setEntities(result.value.entities);
+    setSelectedEntityId(result.value.entities[0]?.id ?? null);
+    setHasExtracted(true);
+    setSessionMessage(result.warnings.length ? `Imported with warning: ${result.warnings[0]}` : "Session imported.");
+
+    if (!globalThis.indexedDB) return;
+    try {
+      const librarySession = await saveSessionToLibrary(result.value.sourceText, result.value.specialty, result.value.entities);
+      setSavedSessions((currentSessions) => [
+        librarySession,
+        ...currentSessions.filter((session) => session.id !== librarySession.id)
+      ]);
+      setSelectedSavedSessionId(librarySession.id);
+    } catch {
+      setSelectedSavedSessionId("");
+    }
+  }
+
   async function handleRestoreSession() {
     const session = selectedSavedSessionId ? await loadSavedSession(selectedSavedSessionId) : loadLatestSession();
     const latest = session ?? loadLatestSession();
@@ -151,6 +190,7 @@ export function ClinicalEntityExtractorPrototype() {
     setEntities(latest.entities);
     setSelectedEntityId(latest.entities[0]?.id ?? null);
     setHasExtracted(true);
+    setSessionMessage("Session restored.");
   }
 
   async function handleClearSavedSession() {
@@ -167,6 +207,7 @@ export function ClinicalEntityExtractorPrototype() {
 
     clearLatestSession();
     setSavedSession(null);
+    setSessionMessage("Saved session deleted.");
   }
 
   function handleCodingStatusChange(
@@ -343,7 +384,11 @@ export function ClinicalEntityExtractorPrototype() {
           </div>
           <div>
             <span>{specialtyLabels[specialty]}</span>
-            context
+            override
+          </div>
+          <div>
+            <span>{contextMode === "auto" ? specialtyLabels[detectedContext.primarySpecialty] : "Manual"}</span>
+            detected
           </div>
         </div>
       </header>
@@ -358,7 +403,46 @@ export function ClinicalEntityExtractorPrototype() {
             <Activity size={20} aria-hidden="true" />
           </div>
 
-          <SpecialtySelector value={specialty} onChange={setSpecialty} />
+          <SpecialtySelector
+            mode={contextMode}
+            value={specialty}
+            onChange={setSpecialty}
+            onModeChange={setContextMode}
+          />
+
+          <section className="context-insight" aria-label="Detected clinical context">
+            <div>
+              <strong>{contextMode === "auto" ? "Auto context" : "Manual override"}</strong>
+              <span>
+                {contextMode === "auto"
+                  ? `${specialtyLabels[detectedContext.primarySpecialty]} · ${detectedContext.noteType}`
+                  : specialtyLabels[specialty]}
+              </span>
+            </div>
+            <div className="context-score-row">
+              {(["primary-care", "mental-health", "physical-therapy"] as Specialty[]).map((contextSpecialty) => (
+                <span key={contextSpecialty}>
+                  {specialtyLabels[contextSpecialty]} {detectedContext.specialtyScores[contextSpecialty]}
+                </span>
+              ))}
+            </div>
+            {(detectedContext.lexicalSignals.length > 0 || detectedContext.sectionSignals.length > 0) && (
+              <div className="context-signal-row">
+                {detectedContext.sectionSignals.concat(detectedContext.lexicalSignals).slice(0, 5).map((signal) => (
+                  <span key={signal}>{signal}</span>
+                ))}
+              </div>
+            )}
+            {detectedContext.ambiguityWarnings.length > 0 && (
+              <div className="context-ambiguity-row">
+                {detectedContext.ambiguityWarnings.slice(0, 3).map((warning) => (
+                  <span key={warning.abbreviation}>
+                    {warning.abbreviation}: {warning.chosenMeaning ?? "needs review"}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
 
           <div className="example-row" aria-label="Example notes">
             {(Object.keys(sampleInputs) as Specialty[]).map((key) => (
@@ -397,6 +481,19 @@ export function ClinicalEntityExtractorPrototype() {
               <Save size={15} aria-hidden="true" />
               Save session
             </button>
+            <label className="file-button">
+              <Upload size={15} aria-hidden="true" />
+              Import JSON
+              <input
+                aria-label="Import session JSON"
+                accept="application/json,.json"
+                type="file"
+                onChange={(event) => {
+                  void handleImportSession(event.target.files?.[0] ?? null);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
             {savedSessions.length > 0 && (
               <select
                 aria-label="Saved session"
@@ -430,9 +527,10 @@ export function ClinicalEntityExtractorPrototype() {
               Delete saved
             </button>
             <span>
-              {savedSession
+              {sessionMessage ||
+              (savedSession
                 ? `Saved ${formatSavedAt(savedSession.savedAt)} · ${savedSessions.length} in browser library`
-                : "No saved session"}
+                : "No saved session")}
             </span>
           </div>
 
@@ -475,7 +573,7 @@ export function ClinicalEntityExtractorPrototype() {
             onSelectEntity={setSelectedEntityId}
           />
 
-          {entities.length > 0 && <DocumentOutputPanel text={text} specialty={specialty} entities={entities} />}
+          {entities.length > 0 && <DocumentOutputPanel text={text} specialty={documentSpecialty} entities={entities} />}
         </section>
 
         <EntityDetailPanel
@@ -502,4 +600,15 @@ function formatSavedAt(savedAt: string) {
   const date = new Date(savedAt);
   if (Number.isNaN(date.getTime())) return "recently";
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function readFileText(file: File) {
+  if (typeof file.text === "function") return file.text();
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
 }

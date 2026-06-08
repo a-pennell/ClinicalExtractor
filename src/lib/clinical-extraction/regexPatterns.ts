@@ -683,9 +683,12 @@ function titleCase(value: string) {
     .join("");
 }
 
-export function detectRegexEntities(text: string, segments: Segment[], specialty: Specialty): RegexDetection[] {
+export function detectRegexEntities(text: string, segments: Segment[], specialties: Specialty | Specialty[]): RegexDetection[] {
+  const activeSpecialties = Array.isArray(specialties) ? specialties : [specialties];
   return factories.flatMap((factory) => {
-    if (specialty !== "mixed" && !factory.specialties.includes(specialty)) return [];
+    if (!factory.specialties.includes("mixed") && !activeSpecialties.some((specialty) => factory.specialties.includes(specialty))) {
+      return [];
+    }
 
     const detections: RegexDetection[] = [];
     const regex = new RegExp(factory.regex.source, factory.regex.flags);
