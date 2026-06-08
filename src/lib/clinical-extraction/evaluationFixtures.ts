@@ -1,4 +1,5 @@
 import { extractClinicalEntities } from "./extractClinicalEntities";
+import { detectClinicalContext } from "./clinicalContext";
 import type { AssertionStatus, ClinicalEntityType, Specialty, TerminologySystem } from "./types";
 
 export type EvaluationFixture = {
@@ -6,6 +7,10 @@ export type EvaluationFixture = {
   specialty: Specialty;
   text: string;
   expectedCanonicalNames: string[];
+  expectedAmbiguityResolutions?: {
+    abbreviation: string;
+    chosenMeaning: string;
+  }[];
 };
 
 export type EvaluationCaseResult = {
@@ -59,6 +64,39 @@ export type CoverageBacklogItem = {
   specialty: Specialty;
   canonicalName: string;
 };
+
+export const ambiguityEvaluationFixtures: EvaluationFixture[] = [
+  {
+    id: "ambiguity-pt-referral",
+    specialty: "mixed",
+    text: "Referral to PT for ROM and HEP after discharge.",
+    expectedCanonicalNames: ["referral to physical therapy", "range of motion", "home exercise program"],
+    expectedAmbiguityResolutions: [
+      { abbreviation: "PT", chosenMeaning: "physical therapy" },
+      { abbreviation: "ROM", chosenMeaning: "range of motion" }
+    ]
+  },
+  {
+    id: "ambiguity-si-risk",
+    specialty: "mixed",
+    text: "Low mood. Denies SI/HI. PHQ-9 18.",
+    expectedCanonicalNames: ["low mood", "suicidal ideation", "homicidal ideation", "Patient Health Questionnaire-9"],
+    expectedAmbiguityResolutions: [{ abbreviation: "SI", chosenMeaning: "suicidal ideation" }]
+  },
+  {
+    id: "ambiguity-slp-swallow",
+    specialty: "mixed",
+    text: "SLP eval for dysphagia. MBSS ordered. Aspiration risk noted. Thickened liquids recommended.",
+    expectedCanonicalNames: [
+      "speech-language pathology",
+      "dysphagia",
+      "modified barium swallow study",
+      "aspiration risk",
+      "diet texture modification"
+    ],
+    expectedAmbiguityResolutions: []
+  }
+];
 
 export const evaluationFixtures: EvaluationFixture[] = [
   {
@@ -371,6 +409,33 @@ export function buildCoverageBacklog(result: EvaluationResult): CoverageBacklogI
       canonicalName
     }))
   );
+}
+
+export function evaluateAmbiguityFixtures(fixtures: EvaluationFixture[] = ambiguityEvaluationFixtures) {
+  return fixtures.map((fixture) => {
+    const context = detectClinicalContext(fixture.text);
+    const expected = fixture.expectedAmbiguityResolutions ?? [];
+    const matched = expected.filter((resolution) =>
+      context.ambiguityWarnings.some(
+        (warning) =>
+          warning.abbreviation === resolution.abbreviation && warning.chosenMeaning === resolution.chosenMeaning
+      )
+    );
+
+    return {
+      id: fixture.id,
+      expectedCount: expected.length,
+      matchedCount: matched.length,
+      missedResolutions: expected.filter(
+        (resolution) =>
+          !matched.some(
+            (matchedResolution) =>
+              matchedResolution.abbreviation === resolution.abbreviation &&
+              matchedResolution.chosenMeaning === resolution.chosenMeaning
+          )
+      )
+    };
+  });
 }
 
 export function buildEvaluationCoverageDashboard(fixtures: EvaluationFixture[] = evaluationFixtures): EvaluationCoverageDashboard {

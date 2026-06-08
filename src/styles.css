@@ -1181,6 +1181,14 @@ dd {
   color: var(--risk-red);
 }
 
+.cue-row.neutral {
+  color: var(--ordered-blue);
+}
+
+.cue-row.neutral span {
+  color: var(--ordered-blue);
+}
+
 .cue-row span,
 .relation-row span {
   color: var(--ink-muted);

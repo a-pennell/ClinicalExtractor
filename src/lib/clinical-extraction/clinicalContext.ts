@@ -1,3 +1,4 @@
+import { resolveAbbreviations } from "./abbreviationRegistry";
 import { detectClinicalSections } from "./sectionParser";
 import type { DetectedClinicalContext, Specialty } from "./types";
 
@@ -17,7 +18,8 @@ const lexicalSignals: ContextSignal[] = [
   { regex: /\b(?:PHQ-?9|GAD-?7|SI|HI|AVH|MDD|PTSD|CBT|DBT|safety plan|anhedonia|low mood|panic|hypomania)\b/i, specialty: "mental-health", label: "behavioral health risk/screening vocabulary", weight: 2 },
   { regex: /\b(?:sertraline|fluoxetine|escitalopram|bupropion|duloxetine)\b/i, specialty: "mental-health", label: "behavioral health medication vocabulary", weight: 1 },
   { regex: /\b(?:ROM|AROM|PROM|HEP|MMT|TUG|5xSTS|SLR|Hawkins|Neer|McMurray|Lachman|FABER|WBAT|NWB|RLE|LLE|RUE|LUE)\b/i, specialty: "physical-therapy", label: "physical therapy measurement/exercise vocabulary", weight: 2 },
-  { regex: /\b(?:gait|balance|overhead reach|stairs|manual muscle|range of motion|home exercise)\b/i, specialty: "physical-therapy", label: "physical therapy functional vocabulary", weight: 1 }
+  { regex: /\b(?:gait|balance|overhead reach|stairs|manual muscle|range of motion|home exercise)\b/i, specialty: "physical-therapy", label: "physical therapy functional vocabulary", weight: 1 },
+  { regex: /\b(?:SLP|ST|AAC|MBSS|VFSS|dysphagia|aphasia|dysarthria|swallow|aspiration|thickened liquids)\b/i, specialty: "physical-therapy", label: "speech-language pathology and swallowing vocabulary", weight: 2 }
 ];
 
 export function detectClinicalContext(text: string): DetectedClinicalContext {
@@ -25,7 +27,16 @@ export function detectClinicalContext(text: string): DetectedClinicalContext {
   const sectionSignals = detectSectionSignals(text, specialtyScores);
   const detectedLexicalSignals = detectLexicalSignals(text, specialtyScores);
   const primarySpecialty = choosePrimarySpecialty(specialtyScores);
-  const activeSpecialties = chooseActiveSpecialties(specialtyScores);
+  const abbreviationResolutions = resolveAbbreviations(text, {
+    primarySpecialty,
+    activeSpecialties: [],
+    specialtyScores,
+    noteType: "unknown",
+    sectionSignals,
+    lexicalSignals: detectedLexicalSignals,
+    ambiguityWarnings: []
+  });
+  const activeSpecialties = chooseActiveSpecialties(specialtyScores, abbreviationResolutions);
 
   return {
     primarySpecialty,
@@ -34,7 +45,15 @@ export function detectClinicalContext(text: string): DetectedClinicalContext {
     noteType: detectNoteType(text),
     sectionSignals,
     lexicalSignals: detectedLexicalSignals,
-    ambiguityWarnings: detectAmbiguityWarnings(text, primarySpecialty)
+    ambiguityWarnings: abbreviationResolutions
+      .filter((resolution) => resolution.possibleMeanings.length > 1)
+      .map((resolution) => ({
+        abbreviation: resolution.abbreviation,
+        possibleMeanings: resolution.possibleMeanings,
+        chosenMeaning: resolution.chosenMeaning,
+        reason: resolution.reason,
+        source: resolution.source
+      }))
   };
 }
 
@@ -95,7 +114,16 @@ function choosePrimarySpecialty(scores: Record<Specialty, number>): Specialty {
   return top;
 }
 
-function chooseActiveSpecialties(scores: Record<Specialty, number>): Specialty[] {
+function chooseActiveSpecialties(
+  scores: Record<Specialty, number>,
+  abbreviationResolutions: ReturnType<typeof resolveAbbreviations> = []
+): Specialty[] {
+  abbreviationResolutions.forEach((resolution) => {
+    const registryEntrySpecialties = resolution.canonicalName ? specialtyHintsByCanonicalName[resolution.canonicalName] : undefined;
+    registryEntrySpecialties?.forEach((specialty) => {
+      scores[specialty] += 1;
+    });
+  });
   const active = specialtyOrder.filter((specialty) => specialty !== "mixed" && scores[specialty] > 0);
   return ["mixed", ...active] as Specialty[];
 }
@@ -108,46 +136,12 @@ function detectNoteType(text: string): DetectedClinicalContext["noteType"] {
   return "unknown";
 }
 
-function detectAmbiguityWarnings(text: string, primarySpecialty: Specialty): DetectedClinicalContext["ambiguityWarnings"] {
-  const warnings: DetectedClinicalContext["ambiguityWarnings"] = [];
-
-  if (/\bPT\b/.test(text)) {
-    const physicalTherapyContext = /\b(referral to PT|PT referral|HEP|ROM|AROM|PROM|gait|balance|therapy)\b/i.test(text);
-    warnings.push({
-      abbreviation: "PT",
-      possibleMeanings: ["patient", "physical therapy"],
-      chosenMeaning: physicalTherapyContext ? "physical therapy" : "patient",
-      reason: physicalTherapyContext ? "Nearby rehabilitation/therapy vocabulary." : "No strong physical therapy context nearby."
-    });
-  }
-
-  if (/\bCP\b/.test(text)) {
-    const neuroDevelopmentalContext = /\b(cerebral palsy|spasticity|developmental|pediatric)\b/i.test(text);
-    warnings.push({
-      abbreviation: "CP",
-      possibleMeanings: ["chest pain", "cerebral palsy"],
-      chosenMeaning: neuroDevelopmentalContext ? "cerebral palsy" : "chest pain",
-      reason: neuroDevelopmentalContext ? "Neurodevelopmental context detected." : "Cardiopulmonary shorthand is most likely in this note context."
-    });
-  }
-
-  if (/\bSI\b/.test(text)) {
-    warnings.push({
-      abbreviation: "SI",
-      possibleMeanings: ["suicidal ideation", "stroke index"],
-      chosenMeaning: primarySpecialty === "mental-health" || /\b(HI|PHQ-?9|mood|risk|denies SI)\b/i.test(text) ? "suicidal ideation" : undefined,
-      reason: "Behavioral-health risk vocabulary is used to disambiguate SI."
-    });
-  }
-
-  if (/\bROM\b/.test(text)) {
-    warnings.push({
-      abbreviation: "ROM",
-      possibleMeanings: ["range of motion", "rupture of membranes", "right otitis media"],
-      chosenMeaning: primarySpecialty === "physical-therapy" || /\b(AROM|PROM|flex|abd|MMT|HEP)\b/i.test(text) ? "range of motion" : undefined,
-      reason: "Musculoskeletal measurement vocabulary is used to disambiguate ROM."
-    });
-  }
-
-  return warnings;
-}
+const specialtyHintsByCanonicalName: Partial<Record<string, Specialty[]>> = {
+  "physical therapy": ["physical-therapy"],
+  "speech therapy": ["physical-therapy"],
+  "speech-language pathology": ["physical-therapy"],
+  "range of motion": ["physical-therapy"],
+  "suicidal ideation": ["mental-health"],
+  "chest pain": ["primary-care"],
+  "cerebral palsy": ["primary-care", "physical-therapy"]
+};

@@ -344,6 +344,23 @@ export function EntityDetailPanel({
         </section>
       ) : null}
 
+      {entity.disambiguation && (
+        <section className="detail-section">
+          <h3>Abbreviation resolution</h3>
+          <div className="cue-list">
+            <div className="cue-row neutral">
+              <AlertTriangle size={15} aria-hidden="true" />
+              <span>
+                {entity.disambiguation.abbreviation}
+                {entity.disambiguation.chosenMeaning ? ` -> ${entity.disambiguation.chosenMeaning}` : " needs review"}
+                {entity.disambiguation.reason ? ` · ${entity.disambiguation.reason}` : ""}
+                {entity.disambiguation.source ? ` Source: ${entity.disambiguation.source}.` : ""}
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
       {entity.relations?.length ? (
         <section className="detail-section">
           <h3>Linked entities</h3>

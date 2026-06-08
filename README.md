@@ -39,6 +39,8 @@ Post-deploy checklist: [docs/deployment-smoke-test.md](docs/deployment-smoke-tes
 
 Backend persistence design: [docs/backend-persistence-design.md](docs/backend-persistence-design.md).
 
+API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md).
+
 ## Prototype Capabilities
 
 - Specialty contexts: Primary Care, Mental Health, Physical Therapy, and Mixed / Auto.

@@ -153,6 +153,13 @@ export type ClinicalEntity = {
     status: EntityReviewStatus;
     note?: string;
   };
+  disambiguation?: {
+    abbreviation: string;
+    chosenMeaning?: string;
+    possibleMeanings: string[];
+    reason?: string;
+    source?: string;
+  };
 };
 
 export type EntityPattern = {
@@ -181,6 +188,7 @@ export type DetectedClinicalContext = {
     possibleMeanings: string[];
     chosenMeaning?: string;
     reason?: string;
+    source?: string;
   }[];
 };
 

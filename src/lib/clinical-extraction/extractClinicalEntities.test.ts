@@ -325,4 +325,22 @@ describe("extractClinicalEntities", () => {
     expect(document.entities.find((entity) => entity.canonicalName === "major depressive disorder")).toBeTruthy();
     expect(document.entities.find((entity) => entity.canonicalName === "referral to physical therapy")).toBeTruthy();
   });
+
+  it("extracts speech-language pathology and swallowing documentation concepts", () => {
+    const entities = extractClinicalEntities(
+      "SLP eval for dysphagia and dysarthria. MBSS ordered. Aspiration risk. Thickened liquids recommended.",
+      { mode: "auto" }
+    );
+
+    expect(entities.find((entity) => entity.canonicalName === "speech-language pathology")?.disambiguation?.source).toBe(
+      "ASHA Common Medical Abbreviations"
+    );
+    expect(entities.find((entity) => entity.canonicalName === "dysphagia")?.codings?.[0].code).toBe("R13.10");
+    expect(entities.find((entity) => entity.canonicalName === "dysarthria")?.codings?.[0].code).toBe("R47.1");
+    expect(entities.find((entity) => entity.canonicalName === "modified barium swallow study")?.codings?.[0].code).toBe(
+      "92611"
+    );
+    expect(entities.find((entity) => entity.canonicalName === "aspiration risk")?.type).toBe("risk");
+    expect(entities.find((entity) => entity.canonicalName === "diet texture modification")?.type).toBe("plan");
+  });
 });

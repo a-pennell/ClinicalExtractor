@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildEvaluationCoverageDashboard, evaluateExtractionFixtures, evaluationFixtures } from "./evaluationFixtures";
+import {
+  ambiguityEvaluationFixtures,
+  buildEvaluationCoverageDashboard,
+  evaluateAmbiguityFixtures,
+  evaluateExtractionFixtures,
+  evaluationFixtures
+} from "./evaluationFixtures";
 import type { Specialty } from "./types";
 
 describe("evaluationFixtures", () => {
@@ -41,5 +47,12 @@ describe("evaluationFixtures", () => {
     expect(dashboard.byEntityType.some((row) => row.key === "problem" && (row.foundCount ?? 0) > 0)).toBe(true);
     expect(dashboard.byAssertion.some((row) => row.key === "absent" && (row.foundCount ?? 0) > 0)).toBe(true);
     expect(dashboard.byTerminologySystem.some((row) => row.key === "ICD-10-CM" && (row.candidateCount ?? 0) > 0)).toBe(true);
+  });
+
+  it("scores ambiguity-specific eval fixtures", () => {
+    const result = evaluateAmbiguityFixtures();
+
+    expect(ambiguityEvaluationFixtures).toHaveLength(3);
+    expect(result.every((caseResult) => caseResult.missedResolutions.length === 0)).toBe(true);
   });
 });

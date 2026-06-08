@@ -938,6 +938,74 @@ const terminologyByCanonicalName: Record<string, CandidateCoding[]> = {
       confidence: "medium",
       status: "candidate"
     }
+  ],
+  dysphagia: [
+    {
+      system: "ICD-10-CM",
+      code: "R13.10",
+      display: "Dysphagia, unspecified",
+      version: FY_2026_ICD_10_CM,
+      confidence: "low",
+      status: "candidate",
+      rationale: "Dysphagia type and phase are not established by a simple mention."
+    },
+    {
+      system: "SNOMED-CT",
+      code: "40739000",
+      display: "Dysphagia",
+      confidence: "medium",
+      status: "candidate"
+    }
+  ],
+  aphasia: [
+    {
+      system: "ICD-10-CM",
+      code: "R47.01",
+      display: "Aphasia",
+      version: FY_2026_ICD_10_CM,
+      confidence: "medium",
+      status: "candidate"
+    }
+  ],
+  dysarthria: [
+    {
+      system: "ICD-10-CM",
+      code: "R47.1",
+      display: "Dysarthria and anarthria",
+      version: FY_2026_ICD_10_CM,
+      confidence: "medium",
+      status: "candidate"
+    }
+  ],
+  "modified barium swallow study": [
+    {
+      system: "CPT",
+      code: "92611",
+      display: "Motion fluoroscopic evaluation of swallowing function by cine or video recording",
+      confidence: "low",
+      status: "candidate",
+      rationale: "Starter procedure candidate; local billing and documentation context must be reviewed."
+    }
+  ],
+  "videofluoroscopic swallowing study": [
+    {
+      system: "CPT",
+      code: "92611",
+      display: "Motion fluoroscopic evaluation of swallowing function by cine or video recording",
+      confidence: "low",
+      status: "candidate",
+      rationale: "Starter procedure candidate; local billing and documentation context must be reviewed."
+    }
+  ],
+  "speech therapy": [
+    {
+      system: "CPT",
+      code: "92507",
+      display: "Treatment of speech, language, voice, communication, and/or auditory processing disorder",
+      confidence: "low",
+      status: "candidate",
+      rationale: "Broad speech therapy treatment candidate; service details must be reviewed."
+    }
   ]
 };
 

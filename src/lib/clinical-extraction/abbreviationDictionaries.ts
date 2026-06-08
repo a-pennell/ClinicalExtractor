@@ -477,6 +477,73 @@ export const entityPatterns: EntityPattern[] = [
     specialties: ["physical-therapy", "primary-care", "mixed"]
   },
   {
+    canonicalName: "dysphagia",
+    type: "problem",
+    terms: ["dysphagia", "swallowing difficulty", "difficulty swallowing"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
+    canonicalName: "aphasia",
+    type: "problem",
+    terms: ["aphasia"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
+    canonicalName: "dysarthria",
+    type: "problem",
+    terms: ["dysarthria", "slurred speech"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
+    canonicalName: "augmentative and alternative communication",
+    displayName: "AAC",
+    type: "functional-limitation",
+    terms: ["AAC", "augmentative and alternative communication"],
+    specialties: ["physical-therapy", "mixed"]
+  },
+  {
+    canonicalName: "speech therapy",
+    displayName: "Speech therapy",
+    type: "referral",
+    terms: ["ST", "speech therapy"],
+    specialties: ["physical-therapy", "mixed"],
+    confidence: "medium"
+  },
+  {
+    canonicalName: "speech-language pathology",
+    displayName: "SLP",
+    type: "referral",
+    terms: ["SLP", "speech-language pathologist", "speech language pathologist"],
+    specialties: ["physical-therapy", "mixed"],
+    confidence: "medium"
+  },
+  {
+    canonicalName: "modified barium swallow study",
+    displayName: "MBSS",
+    type: "imaging",
+    terms: ["MBSS", "modified barium swallow study"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
+    canonicalName: "videofluoroscopic swallowing study",
+    displayName: "VFSS",
+    type: "imaging",
+    terms: ["VFSS", "videofluoroscopic swallowing study"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
+    canonicalName: "aspiration risk",
+    type: "risk",
+    terms: ["aspiration risk", "risk for aspiration"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
+    canonicalName: "diet texture modification",
+    type: "plan",
+    terms: ["diet texture modification", "mechanical soft diet", "pureed diet", "thickened liquids"],
+    specialties: ["physical-therapy", "primary-care", "mixed"]
+  },
+  {
     canonicalName: "neck pain",
     type: "problem",
     terms: ["neck pain", "cervical pain"],

@@ -1,4 +1,5 @@
 import { entityPatterns } from "./abbreviationDictionaries";
+import { resolveAbbreviations, type AbbreviationResolution } from "./abbreviationRegistry";
 import { detectClinicalContext, resolveExtractionSpecialties } from "./clinicalContext";
 import { dedupeEntities } from "./dedupeEntities";
 import { linkEntityRelations } from "./entityRelations";
@@ -30,16 +31,83 @@ export function extractClinicalEntityDocument(rawText: string, options: Extracti
     id: buildId(entity.type, entity.canonicalName, index + dictionaryEntities.length),
     ...entity
   }));
+  const abbreviationResolutions = resolveAbbreviations(rawText, context);
 
-  const codedEntities = dedupeEntities(dictionaryEntities.concat(regexEntities)).map((entity, index) =>
-    addCandidateCodings({
+  const ambiguousReviewEntities = buildAmbiguousReviewEntities(rawText, segments, abbreviationResolutions);
+  const codedEntities = dedupeEntities(dictionaryEntities.concat(regexEntities, ambiguousReviewEntities)).map((entity, index) =>
+    addCandidateCodings(attachDisambiguation({
       ...entity,
       id: buildId(entity.type, entity.canonicalName, index)
-    })
+    }, abbreviationResolutions))
   );
   const entities = annotateEntityUncertainty(linkEntityRelations(codedEntities));
 
   return { sections, context, entities };
+}
+
+function attachDisambiguation(entity: ClinicalEntity, resolutions: AbbreviationResolution[]): ClinicalEntity {
+  const resolution = resolutions.find(
+    (candidate) =>
+      candidate.canonicalName === entity.canonicalName ||
+      entity.mentions.some((mention) => mention.text.toLowerCase() === candidate.abbreviation.toLowerCase())
+  );
+  if (!resolution) return entity;
+
+  return {
+    ...entity,
+    disambiguation: {
+      abbreviation: resolution.abbreviation,
+      chosenMeaning: resolution.chosenMeaning,
+      possibleMeanings: resolution.possibleMeanings,
+      reason: resolution.reason,
+      source: resolution.source
+    },
+    confidence: resolution.confidence === "low" ? "low" : entity.confidence
+  };
+}
+
+function buildAmbiguousReviewEntities(
+  text: string,
+  segments: Segment[],
+  resolutions: AbbreviationResolution[]
+): ClinicalEntity[] {
+  return resolutions.flatMap((resolution, index) => {
+    if (resolution.chosenMeaning || resolution.canonicalName) return [];
+    const matchIndex = text.toLowerCase().indexOf(resolution.abbreviation.toLowerCase());
+    if (matchIndex < 0) return [];
+    const segment = segments.find((candidate) => matchIndex >= candidate.start && matchIndex < candidate.end);
+
+    return [
+      {
+        id: buildId("other", `ambiguous ${resolution.abbreviation}`, index),
+        canonicalName: `ambiguous ${resolution.abbreviation}`,
+        displayName: `Ambiguous ${resolution.abbreviation}`,
+        type: "other",
+        specialties: ["mixed"],
+        mentions: [
+          {
+            text: text.slice(matchIndex, matchIndex + resolution.abbreviation.length),
+            start: matchIndex,
+            end: matchIndex + resolution.abbreviation.length,
+            sentence: segment?.text,
+            section: segment?.section
+          }
+        ],
+        attributes: {
+          assertion: "possible",
+          normalizedTerm: `ambiguous ${resolution.abbreviation}`
+        },
+        confidence: "low",
+        explanation: resolution.reason,
+        disambiguation: {
+          abbreviation: resolution.abbreviation,
+          possibleMeanings: resolution.possibleMeanings,
+          reason: resolution.reason,
+          source: resolution.source
+        }
+      }
+    ];
+  });
 }
 
 export function splitIntoSegments(text: string, sections: ClinicalSection[] = detectClinicalSections(text)): Segment[] {
