@@ -471,7 +471,10 @@ export function EntityDetailPanel({
         </section>
       )}
 
-      <TerminologyExplorerPanel entity={entity} />
+      <details className="detail-section advanced-disclosure">
+        <summary>Terminology lookup</summary>
+        <TerminologyExplorerPanel entity={entity} />
+      </details>
 
       <section className="detail-section">
         <h3>Mentions</h3>
@@ -497,15 +500,15 @@ export function EntityDetailPanel({
         </section>
       )}
 
-      <section className="detail-section">
-        <h3>FHIR preview</h3>
+      <details className="detail-section advanced-disclosure">
+        <summary>FHIR preview</summary>
         <pre>{JSON.stringify(fhirPreview, null, 2)}</pre>
-      </section>
+      </details>
 
-      <section className="detail-section">
-        <h3>Structured object</h3>
+      <details className="detail-section advanced-disclosure">
+        <summary>Structured object</summary>
         <pre>{JSON.stringify(entity, null, 2)}</pre>
-      </section>
+      </details>
     </aside>
   );
 }

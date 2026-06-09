@@ -55,8 +55,7 @@ export function TerminologyExplorerPanel({ entity }: TerminologyExplorerPanelPro
   }
 
   return (
-    <section className="detail-section">
-      <h3>Terminology demo</h3>
+    <div className="terminology-explorer">
       <div className="terminology-controls">
         <label className="review-field full">
           <span>Search term</span>
@@ -106,6 +105,6 @@ export function TerminologyExplorerPanel({ entity }: TerminologyExplorerPanelPro
           <p>No mock terminology candidates returned.</p>
         )}
       </div>
-    </section>
+    </div>
   );
 }

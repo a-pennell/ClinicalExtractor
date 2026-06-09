@@ -40,31 +40,34 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
   if (!selectedFixture || !selectedResult) return null;
 
   return (
-    <section className="eval-lab-panel" aria-label="Eval lab">
-      <div className="panel-heading compact">
+    <details className="eval-lab-panel">
+      <summary className="eval-lab-summary">
         <div>
           <h2>Eval lab</h2>
-          <p>Synthetic notes with expected entities for coverage review.</p>
+          <p>
+            {evaluationFixtures.length} mock notes · {Math.round(overallResult.recall * 100)}% recall · {backlog.length} gaps
+          </p>
         </div>
         <FlaskConical size={19} aria-hidden="true" />
-      </div>
+      </summary>
 
-      <div className="eval-summary">
-        <div>
-          <strong>{evaluationFixtures.length}</strong>
-          mock notes
+      <div className="eval-lab-body">
+        <div className="eval-summary">
+          <div>
+            <strong>{evaluationFixtures.length}</strong>
+            mock notes
+          </div>
+          <div>
+            <strong>{Math.round(overallResult.recall * 100)}%</strong>
+            recall
+          </div>
+          <div>
+            <strong>{backlog.length}</strong>
+            coverage gaps
+          </div>
         </div>
-        <div>
-          <strong>{Math.round(overallResult.recall * 100)}%</strong>
-          recall
-        </div>
-        <div>
-          <strong>{backlog.length}</strong>
-          coverage gaps
-        </div>
-      </div>
 
-      <section className="coverage-dashboard" aria-label="Coverage dashboard">
+        <section className="coverage-dashboard" aria-label="Coverage dashboard">
         <div className="coverage-dashboard-header">
           <h3>Coverage dashboard</h3>
           <span>
@@ -127,9 +130,9 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
             </div>
           </section>
         )}
-      </section>
+        </section>
 
-      <label className="compact-select">
+        <label className="compact-select">
         <span>Eval context</span>
         <select
           aria-label="Eval context filter"
@@ -142,9 +145,9 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
             </option>
           ))}
         </select>
-      </label>
+        </label>
 
-      <label className="review-field full">
+        <label className="review-field full">
         <span>Eval note</span>
         <select value={selectedFixture.id} onChange={(event) => setSelectedFixtureId(event.target.value)}>
           {filteredFixtures.map((fixture) => (
@@ -153,14 +156,14 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
             </option>
           ))}
         </select>
-      </label>
+        </label>
 
-      <div className="eval-note-preview">
+        <div className="eval-note-preview">
         <span>{specialtyLabels[selectedFixture.specialty]}</span>
         <p>{selectedFixture.text}</p>
-      </div>
+        </div>
 
-      <div className="eval-summary compact">
+        <div className="eval-summary compact">
         <div>
           <strong>{selectedResult.matchedCount}/{selectedResult.expectedCount}</strong>
           found
@@ -173,21 +176,21 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
           <strong>{selectedResult.extraCanonicalNames.length}</strong>
           extra
         </div>
-      </div>
+        </div>
 
-      <div className="review-actions">
+        <div className="review-actions">
         <button className="secondary-button" type="button" onClick={() => onLoadFixture(selectedFixture)}>
           <ListChecks size={15} aria-hidden="true" />
           Load eval note
         </button>
-      </div>
+        </div>
 
-      <EvalTokenList title="Expected" values={selectedResult.expectedCanonicalNames} tone="neutral" />
-      <EvalTokenList title="Found" values={selectedResult.foundCanonicalNames} tone="positive" />
-      <EvalTokenList title="Missed" values={selectedResult.missedCanonicalNames} tone="danger" emptyText="No misses" />
-      <EvalTokenList title="Extra" values={selectedResult.extraCanonicalNames} tone="warning" emptyText="No extras" />
+        <EvalTokenList title="Expected" values={selectedResult.expectedCanonicalNames} tone="neutral" />
+        <EvalTokenList title="Found" values={selectedResult.foundCanonicalNames} tone="positive" />
+        <EvalTokenList title="Missed" values={selectedResult.missedCanonicalNames} tone="danger" emptyText="No misses" />
+        <EvalTokenList title="Extra" values={selectedResult.extraCanonicalNames} tone="warning" emptyText="No extras" />
 
-      <section className="coverage-backlog">
+        <section className="coverage-backlog">
         <h3>Coverage backlog</h3>
         {backlog.length ? (
           <div className="eval-token-list">
@@ -200,8 +203,9 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
         ) : (
           <p>No expected-entity misses in the synthetic set.</p>
         )}
-      </section>
-    </section>
+        </section>
+      </div>
+    </details>
   );
 }
 

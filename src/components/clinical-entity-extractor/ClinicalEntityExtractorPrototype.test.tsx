@@ -167,6 +167,8 @@ describe("ClinicalEntityExtractorPrototype", () => {
   it("loads synthetic eval notes from the eval lab", () => {
     render(<ClinicalEntityExtractorPrototype />);
 
+    fireEvent.click(screen.getByText("Eval lab"));
+
     expect(screen.getByText("Coverage dashboard")).toBeTruthy();
     expect(screen.getByText("Entity mix")).toBeTruthy();
     expect(screen.getByText("Terminology")).toBeTruthy();
@@ -196,6 +198,7 @@ describe("ClinicalEntityExtractorPrototype", () => {
   it("runs mock async terminology lookup and expansion from the detail panel", async () => {
     render(<ClinicalEntityExtractorPrototype />);
 
+    fireEvent.click(screen.getByText("Terminology lookup"));
     fireEvent.click(screen.getByRole("button", { name: /lookup entity/i }));
     expect(await screen.findByText(/\$lookup · Hypertension/i)).toBeTruthy();
     expect(screen.getAllByText("ICD-10-CM I10").length).toBeGreaterThan(0);

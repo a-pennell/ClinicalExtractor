@@ -70,10 +70,6 @@ export function ClinicalEntityExtractorPrototype() {
     () => entities.reduce((count, entity) => count + (entity.codings?.filter((coding) => coding.status === "selected").length ?? 0), 0),
     [entities]
   );
-  const relationCount = useMemo(
-    () => entities.reduce((count, entity) => count + (entity.relations?.length ?? 0), 0),
-    [entities]
-  );
   const highPriorityCount = useMemo(
     () => entities.filter((entity) => entity.uncertainty?.reviewPriority === "high").length,
     [entities]
@@ -377,18 +373,6 @@ export function ClinicalEntityExtractorPrototype() {
           <div>
             <span>{highPriorityCount}</span>
             high priority
-          </div>
-          <div>
-            <span>{relationCount}</span>
-            links
-          </div>
-          <div>
-            <span>{specialtyLabels[specialty]}</span>
-            override
-          </div>
-          <div>
-            <span>{contextMode === "auto" ? specialtyLabels[detectedContext.primarySpecialty] : "Manual"}</span>
-            detected
           </div>
         </div>
       </header>

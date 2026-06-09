@@ -96,13 +96,14 @@ h3 {
 
 .topbar-metrics {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
 .topbar-metrics div {
-  min-width: 124px;
+  flex: 0 0 104px;
+  min-width: 0;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   padding: 10px 12px;
@@ -491,6 +492,39 @@ select:focus,
   border-top: 1px solid var(--line-soft);
   margin-top: 16px;
   padding-top: 16px;
+}
+
+.eval-lab-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f6f3ee;
+  cursor: pointer;
+  list-style: none;
+}
+
+.eval-lab-summary::-webkit-details-marker {
+  display: none;
+}
+
+.eval-lab-summary h2 {
+  margin-bottom: 2px;
+}
+
+.eval-lab-summary p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.eval-lab-body {
+  padding-top: 12px;
 }
 
 .eval-summary {
@@ -897,6 +931,18 @@ dd {
 .detail-section p {
   color: var(--ink-muted);
   line-height: 1.45;
+}
+
+.advanced-disclosure summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 780;
+  list-style-position: outside;
+}
+
+.advanced-disclosure[open] summary {
+  margin-bottom: 10px;
 }
 
 .review-form {
