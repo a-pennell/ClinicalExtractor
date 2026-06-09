@@ -129,18 +129,20 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
         )}
       </section>
 
-      <div className="eval-filter-row" aria-label="Eval context filter">
-        {filterOptions.map((option) => (
-          <button
-            className={filter === option ? "ghost-button is-active" : "ghost-button"}
-            key={option}
-            type="button"
-            onClick={() => handleFilterChange(option)}
-          >
-            {option === "all" ? "All" : specialtyLabels[option]}
-          </button>
-        ))}
-      </div>
+      <label className="compact-select">
+        <span>Eval context</span>
+        <select
+          aria-label="Eval context filter"
+          value={filter}
+          onChange={(event) => handleFilterChange(event.currentTarget.value as Specialty | "all")}
+        >
+          {filterOptions.map((option) => (
+            <option key={option} value={option}>
+              {option === "all" ? "All contexts" : specialtyLabels[option]}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <label className="review-field full">
         <span>Eval note</span>

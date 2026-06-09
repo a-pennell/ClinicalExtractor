@@ -90,6 +90,20 @@ describe("ClinicalEntityExtractorPrototype", () => {
     expect(screen.getAllByText(/prototype-2026-06/i).length).toBeGreaterThan(0);
   });
 
+  it("keeps specialty context buttons distinct from sample loading controls", () => {
+    render(<ClinicalEntityExtractorPrototype />);
+
+    expect(screen.getAllByRole("button", { name: "Primary Care" })).toHaveLength(1);
+    expect(screen.getByLabelText("Example note")).toBeTruthy();
+    expect(screen.getByLabelText("Eval context filter")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Example note"), {
+      target: { value: "mental-health" }
+    });
+
+    expect((screen.getByLabelText("Clinical text") as HTMLTextAreaElement).value).toContain("PHQ-9 18");
+  });
+
   it("saves and restores the latest extraction session locally", () => {
     render(<ClinicalEntityExtractorPrototype />);
 

@@ -444,13 +444,24 @@ export function ClinicalEntityExtractorPrototype() {
             )}
           </section>
 
-          <div className="example-row" aria-label="Example notes">
-            {(Object.keys(sampleInputs) as Specialty[]).map((key) => (
-              <button className="ghost-button" key={key} type="button" onClick={() => loadExample(key)}>
-                {specialtyLabels[key]}
-              </button>
-            ))}
-          </div>
+          <label className="compact-select example-select">
+            <span>Example note</span>
+            <select
+              aria-label="Example note"
+              value=""
+              onChange={(event) => {
+                const nextSpecialty = event.currentTarget.value as Specialty;
+                if (nextSpecialty) loadExample(nextSpecialty);
+              }}
+            >
+              <option value="">Load a sample note...</option>
+              {(Object.keys(sampleInputs) as Specialty[]).map((key) => (
+                <option key={key} value={key}>
+                  {specialtyLabels[key]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <ClinicalTextInput value={text} onChange={handleTextChange} onSelectionChange={(start, end) => setSelectedTextRange({ start, end })} />
 
