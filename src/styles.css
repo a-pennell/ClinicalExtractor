@@ -1006,7 +1006,7 @@ dd {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-bottom: 10px;
+  padding: 10px 10px 0;
 }
 
 .type-summary span {
@@ -1021,11 +1021,10 @@ dd {
 .terminology-manifest {
   display: grid;
   gap: 6px;
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  margin-bottom: 10px;
+  border-top: 1px solid var(--line-soft);
+  margin: 10px 0 0;
   padding: 10px;
-  background: #f6f3ee;
+  background: transparent;
 }
 
 .terminology-manifest strong {
@@ -1100,8 +1099,32 @@ dd {
   line-height: 1.45;
 }
 
+.export-groups {
+  display: grid;
+  gap: 8px;
+}
+
+.export-groups section {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f6f3ee;
+}
+
+.export-groups h4 {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+}
+
+.export-groups p {
+  margin: 0 0 8px;
+  color: var(--ink-muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
 .export-actions {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .copy-status {

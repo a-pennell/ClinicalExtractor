@@ -77,9 +77,12 @@ describe("ClinicalEntityExtractorPrototype", () => {
   it("shows document-level JSON and FHIR bundle output", () => {
     render(<ClinicalEntityExtractorPrototype />);
 
-    expect(screen.getByText("document output")).toBeTruthy();
+    expect(screen.getByText("output package")).toBeTruthy();
+    expect(screen.getByText("Session data")).toBeTruthy();
+    expect(screen.getByText("Reviewer handoff")).toBeTruthy();
     expect(screen.getByText("Session JSON")).toBeTruthy();
     expect(screen.getByText("FHIR Bundle")).toBeTruthy();
+    expect(screen.getByText("Entity and terminology inventory")).toBeTruthy();
     expect(screen.getByLabelText("FHIR quality")).toBeTruthy();
     expect(screen.getByText("Local checks passed")).toBeTruthy();
     expect(screen.getByRole("button", { name: /copy json/i })).toBeTruthy();

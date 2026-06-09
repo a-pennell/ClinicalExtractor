@@ -51,56 +51,9 @@ export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutpu
     <section className="document-output" aria-label="Document output">
       <div className="entity-group">
         <h3>
-          <span>document output</span>
+          <span>output package</span>
           <small>{session.summary.entityCount}</small>
         </h3>
-        <div className="summary-strip">
-          <div>
-            <strong>{session.summary.reviewedCount}</strong>
-            reviewed
-          </div>
-          <div>
-            <strong>{session.summary.selectedCodingCount}</strong>
-            selected codes
-          </div>
-          <div>
-            <strong>{bundle.entry.length}</strong>
-            FHIR entries
-          </div>
-          <div>
-            <strong>{session.summary.relationCount}</strong>
-            links
-          </div>
-          <div>
-            <strong>{session.summary.highPriorityReviewCount}</strong>
-            high priority
-          </div>
-        </div>
-        {typeEntries.length > 0 && (
-          <div className="type-summary">
-            {typeEntries.map(([type, count]) => (
-              <span key={type}>
-                {type}: {count}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="terminology-manifest">
-          <strong>
-            {session.terminology.provider.label} · {session.terminology.provider.contentVersion}
-          </strong>
-          <div>
-            {usedTerminologySystems.length ? (
-              usedTerminologySystems.map((system) => (
-                <span key={system.system}>
-                  {system.system} {system.version}: {system.candidateCount} candidates
-                </span>
-              ))
-            ) : (
-              <span>No terminology candidates in this extraction.</span>
-            )}
-          </div>
-        </div>
         <div className={`fhir-quality ${fhirQuality.ok ? "pass" : "fail"}`} aria-label="FHIR quality">
           <div>
             <strong>FHIR quality</strong>
@@ -124,37 +77,84 @@ export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutpu
             </ul>
           )}
         </div>
-        <div className="review-actions export-actions" aria-label="Export and share actions">
-          <button className="secondary-button" type="button" onClick={() => copyText("Session JSON", sessionJson)}>
-            <Copy size={15} aria-hidden="true" />
-            Copy JSON
-          </button>
-          <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-session.json", sessionJson, "application/json")}>
-            <Download size={15} aria-hidden="true" />
-            Download JSON
-          </button>
-          <button className="secondary-button" type="button" onClick={() => copyText("FHIR bundle", bundleJson)}>
-            <Copy size={15} aria-hidden="true" />
-            Copy FHIR
-          </button>
-          <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-fhir-bundle.json", bundleJson, "application/json")}>
-            <Download size={15} aria-hidden="true" />
-            Download FHIR
-          </button>
-          <button className="secondary-button" type="button" onClick={() => copyText("Entity summary", clipboardSummary)}>
-            <FileText size={15} aria-hidden="true" />
-            Copy summary
-          </button>
-          <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-review.md", reviewerReport, "text/markdown")}>
-            <Download size={15} aria-hidden="true" />
-            Download report
-          </button>
-          <button className="secondary-button" type="button" onClick={shareReport}>
-            <Share2 size={15} aria-hidden="true" />
-            Share report
-          </button>
+
+        <div className="export-groups" aria-label="Export and share actions">
+          <section>
+            <h4>Session data</h4>
+            <p>Full prototype state for save, import, or handoff.</p>
+            <div className="review-actions export-actions">
+              <button className="secondary-button" type="button" onClick={() => copyText("Session JSON", sessionJson)}>
+                <Copy size={15} aria-hidden="true" />
+                Copy JSON
+              </button>
+              <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-session.json", sessionJson, "application/json")}>
+                <Download size={15} aria-hidden="true" />
+                Download JSON
+              </button>
+            </div>
+          </section>
+          <section>
+            <h4>FHIR preview</h4>
+            <p>Bundle-shaped interoperability preview.</p>
+            <div className="review-actions export-actions">
+              <button className="secondary-button" type="button" onClick={() => copyText("FHIR bundle", bundleJson)}>
+                <Copy size={15} aria-hidden="true" />
+                Copy FHIR
+              </button>
+              <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-fhir-bundle.json", bundleJson, "application/json")}>
+                <Download size={15} aria-hidden="true" />
+                Download FHIR
+              </button>
+            </div>
+          </section>
+          <section>
+            <h4>Reviewer handoff</h4>
+            <p>Readable summary for clinical review.</p>
+            <div className="review-actions export-actions">
+              <button className="secondary-button" type="button" onClick={() => copyText("Entity summary", clipboardSummary)}>
+                <FileText size={15} aria-hidden="true" />
+                Copy summary
+              </button>
+              <button className="secondary-button" type="button" onClick={() => downloadFile("clinical-entity-review.md", reviewerReport, "text/markdown")}>
+                <Download size={15} aria-hidden="true" />
+                Download report
+              </button>
+              <button className="secondary-button" type="button" onClick={shareReport}>
+                <Share2 size={15} aria-hidden="true" />
+                Share report
+              </button>
+            </div>
+          </section>
         </div>
         {copyStatus && <p className="copy-status" role="status">{copyStatus}</p>}
+        <details className="json-disclosure">
+          <summary>Entity and terminology inventory</summary>
+          {typeEntries.length > 0 && (
+            <div className="type-summary">
+              {typeEntries.map(([type, count]) => (
+                <span key={type}>
+                  {type}: {count}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="terminology-manifest">
+            <strong>
+              {session.terminology.provider.label} · {session.terminology.provider.contentVersion}
+            </strong>
+            <div>
+              {usedTerminologySystems.length ? (
+                usedTerminologySystems.map((system) => (
+                  <span key={system.system}>
+                    {system.system} {system.version}: {system.candidateCount} candidates
+                  </span>
+                ))
+              ) : (
+                <span>No terminology candidates in this extraction.</span>
+              )}
+            </div>
+          </div>
+        </details>
         <details className="json-disclosure">
           <summary>Session JSON</summary>
           <pre>{sessionJson}</pre>
