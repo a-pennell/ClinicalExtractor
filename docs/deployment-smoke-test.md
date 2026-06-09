@@ -2,6 +2,16 @@
 
 Use this checklist after each Railway deployment.
 
+## Automated Check
+
+Run this against the deployed URL:
+
+```bash
+npm run smoke:deployment -- https://your-railway-domain.up.railway.app
+```
+
+It verifies the app shell, `/api/health`, `/api/providers`, and prototype session creation before the manual workflow below.
+
 ## Public App
 
 - Open the Railway public URL.
@@ -56,5 +66,5 @@ Use this checklist after each Railway deployment.
 ## Known Non-Blockers
 
 - Terminology mappings are prototype candidates.
-- FHIR output is preview shape, not IG-validated production FHIR.
+- FHIR output has local structural quality checks, but it is still not IG-validated production FHIR.
 - Browser session library is local to the browser and device.

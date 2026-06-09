@@ -354,6 +354,8 @@ export function EntityDetailPanel({
                 {entity.disambiguation.abbreviation}
                 {entity.disambiguation.chosenMeaning ? ` -> ${entity.disambiguation.chosenMeaning}` : " needs review"}
                 {entity.disambiguation.reason ? ` · ${entity.disambiguation.reason}` : ""}
+                {entity.disambiguation.evidence?.length ? ` Evidence: ${entity.disambiguation.evidence.join(", ")}.` : ""}
+                {entity.disambiguation.mentionCount ? ` Mentions: ${entity.disambiguation.mentionCount}.` : ""}
                 {entity.disambiguation.source ? ` Source: ${entity.disambiguation.source}.` : ""}
               </span>
             </div>

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "start": "node server.mjs",
     "preview": "vite preview",
+    "smoke:deployment": "node scripts/deployment-smoke-test.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

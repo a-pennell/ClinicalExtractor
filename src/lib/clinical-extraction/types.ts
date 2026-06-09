@@ -159,6 +159,8 @@ export type ClinicalEntity = {
     possibleMeanings: string[];
     reason?: string;
     source?: string;
+    evidence?: string[];
+    mentionCount?: number;
   };
 };
 
@@ -189,6 +191,8 @@ export type DetectedClinicalContext = {
     chosenMeaning?: string;
     reason?: string;
     source?: string;
+    evidence?: string[];
+    mentionCount?: number;
   }[];
 };
 

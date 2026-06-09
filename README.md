@@ -39,7 +39,7 @@ Post-deploy checklist: [docs/deployment-smoke-test.md](docs/deployment-smoke-tes
 
 Backend persistence design: [docs/backend-persistence-design.md](docs/backend-persistence-design.md).
 
-API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md).
+API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md). The production server also exposes lightweight `/api/health`, `/api/providers`, and in-memory session endpoints for deployment smoke tests.
 
 ## Prototype Capabilities
 
@@ -48,6 +48,8 @@ API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md).
 - Entity detail review with assertion, confidence, coding, relation, and reviewer-state controls.
 - Starter terminology candidates for ICD-10-CM, SNOMED CT, LOINC, RxNorm, CPT, and HCPCS.
 - Document-level JSON, FHIR Bundle preview, reviewer report, and clipboard summary exports.
+- ASHA-sourced abbreviation registry starter with context-aware ambiguity review for overlapping shorthand.
+- Local FHIR Bundle quality checks for prototype resource shape, required ids, coding URIs, subjects, and Observation values.
 - Browser-side session persistence: latest-session localStorage compatibility plus an IndexedDB session library for multiple saved review cases.
 - Synthetic eval lab with mock notes across primary care, mental health, physical therapy, and mixed contexts.
 
@@ -55,5 +57,11 @@ API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md).
 
 - This is not production clinical NLP.
 - Terminology mappings are starter candidates and must be validated against authoritative terminology services before clinical, billing, quality, or interoperability use.
-- FHIR output is a preview of resource shape, not a validated implementation guide profile.
+- FHIR output is a preview of resource shape with local structural checks, not a validated implementation guide profile.
+
+Deployment smoke check after `npm run build` and `npm start`:
+
+```bash
+npm run smoke:deployment -- http://127.0.0.1:4173
+```
 - Session persistence is local to the browser and is not shared across users or devices.

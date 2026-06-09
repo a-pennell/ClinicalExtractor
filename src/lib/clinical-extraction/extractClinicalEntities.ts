@@ -60,7 +60,9 @@ function attachDisambiguation(entity: ClinicalEntity, resolutions: AbbreviationR
       chosenMeaning: resolution.chosenMeaning,
       possibleMeanings: resolution.possibleMeanings,
       reason: resolution.reason,
-      source: resolution.source
+      source: resolution.source,
+      evidence: resolution.evidence,
+      mentionCount: resolution.mentionCount
     },
     confidence: resolution.confidence === "low" ? "low" : entity.confidence
   };
@@ -103,7 +105,9 @@ function buildAmbiguousReviewEntities(
           abbreviation: resolution.abbreviation,
           possibleMeanings: resolution.possibleMeanings,
           reason: resolution.reason,
-          source: resolution.source
+          source: resolution.source,
+          evidence: resolution.evidence,
+          mentionCount: resolution.mentionCount
         }
       }
     ];

@@ -52,7 +52,9 @@ export function detectClinicalContext(text: string): DetectedClinicalContext {
         possibleMeanings: resolution.possibleMeanings,
         chosenMeaning: resolution.chosenMeaning,
         reason: resolution.reason,
-        source: resolution.source
+        source: resolution.source,
+        evidence: resolution.evidence,
+        mentionCount: resolution.mentionCount
       }))
   };
 }
@@ -143,5 +145,8 @@ const specialtyHintsByCanonicalName: Partial<Record<string, Specialty[]>> = {
   "range of motion": ["physical-therapy"],
   "suicidal ideation": ["mental-health"],
   "chest pain": ["primary-care"],
-  "cerebral palsy": ["primary-care", "physical-therapy"]
+  "cerebral palsy": ["primary-care", "physical-therapy"],
+  "occupational therapy": ["physical-therapy"],
+  "cancer": ["primary-care"],
+  "cardiac arrest": ["primary-care"]
 };

@@ -14,6 +14,11 @@ export type ValidationResult<T> =
   | { ok: true; value: T; warnings: string[] }
   | { ok: false; errors: string[]; warnings: string[] };
 
+export type FhirValidationSummary = {
+  resourceCount: number;
+  resourceTypes: Record<string, number>;
+};
+
 const specialties: Specialty[] = ["primary-care", "mental-health", "physical-therapy", "mixed"];
 const entityTypes: ClinicalEntityType[] = [
   "problem",
@@ -93,6 +98,7 @@ export function validateExtractionSessionPayload(payload: unknown): ValidationRe
 }
 
 export function validateFhirBundlePayload(payload: unknown): ValidationResult<{ resourceType: "Bundle"; type: string }> {
+  const quality = validateFhirBundleQuality(payload);
   const warnings: string[] = [];
 
   if (!isRecord(payload)) {
@@ -102,8 +108,110 @@ export function validateFhirBundlePayload(payload: unknown): ValidationResult<{ 
     return { ok: false, errors: ["FHIR preview resourceType must be Bundle."], warnings };
   }
   if (!Array.isArray(payload.entry)) warnings.push("FHIR Bundle preview has no entry array.");
+  warnings.push(...quality.warnings);
+  if (!quality.ok) return { ok: false, errors: quality.errors, warnings };
 
   return { ok: true, value: { resourceType: "Bundle", type: typeof payload.type === "string" ? payload.type : "collection" }, warnings };
+}
+
+export function validateFhirBundleQuality(payload: unknown): {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  summary: FhirValidationSummary;
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const summary: FhirValidationSummary = { resourceCount: 0, resourceTypes: {} };
+
+  if (!isRecord(payload)) {
+    return { ok: false, errors: ["FHIR payload must be an object."], warnings, summary };
+  }
+  if (payload.resourceType !== "Bundle") errors.push("FHIR payload resourceType must be Bundle.");
+  if (payload.type !== "collection") warnings.push("Prototype FHIR Bundle should use type=collection.");
+  if (!Array.isArray(payload.entry)) {
+    errors.push("FHIR Bundle must include an entry array.");
+    return { ok: false, errors, warnings, summary };
+  }
+
+  payload.entry.forEach((entry, index) => {
+    if (!isRecord(entry)) {
+      errors.push(`FHIR entry ${index + 1} must be an object.`);
+      return;
+    }
+    if (typeof entry.fullUrl !== "string" || !entry.fullUrl.startsWith("urn:uuid:")) {
+      warnings.push(`FHIR entry ${index + 1} should use a urn:uuid fullUrl.`);
+    }
+    const resource = entry.resource;
+    if (!isRecord(resource)) {
+      errors.push(`FHIR entry ${index + 1} is missing a resource object.`);
+      return;
+    }
+    validateFhirResource(resource, index + 1, errors, warnings, summary);
+  });
+
+  return { ok: errors.length === 0, errors, warnings, summary };
+}
+
+function validateFhirResource(
+  resource: Record<string, unknown>,
+  entryNumber: number,
+  errors: string[],
+  warnings: string[],
+  summary: FhirValidationSummary
+) {
+  const resourceType = typeof resource.resourceType === "string" ? resource.resourceType : "";
+  if (!resourceType) {
+    errors.push(`FHIR entry ${entryNumber} resource is missing resourceType.`);
+    return;
+  }
+
+  summary.resourceCount += 1;
+  summary.resourceTypes[resourceType] = (summary.resourceTypes[resourceType] ?? 0) + 1;
+
+  if (typeof resource.id !== "string" || !resource.id) errors.push(`FHIR ${resourceType} entry ${entryNumber} is missing id.`);
+  if (!hasSubjectLikeReference(resource)) warnings.push(`FHIR ${resourceType} entry ${entryNumber} has no prototype subject/patient.`);
+
+  if (["Condition", "Observation", "MedicationStatement", "AllergyIntolerance", "ServiceRequest", "Procedure"].includes(resourceType)) {
+    const code = resourceType === "MedicationStatement" ? resource.medicationCodeableConcept : resource.code;
+    if (!isCodeableConcept(code)) warnings.push(`FHIR ${resourceType} entry ${entryNumber} has no code text or coding.`);
+    validateCodeableConcept(code, `FHIR ${resourceType} entry ${entryNumber}`, warnings);
+  }
+
+  if (resourceType === "Observation") {
+    if (typeof resource.status !== "string") errors.push(`FHIR Observation entry ${entryNumber} is missing status.`);
+    if (!("valueQuantity" in resource) && !("valueString" in resource) && !("component" in resource)) {
+      warnings.push(`FHIR Observation entry ${entryNumber} has no value or component.`);
+    }
+  }
+
+  if (resourceType === "ServiceRequest" && typeof resource.intent !== "string") {
+    errors.push(`FHIR ServiceRequest entry ${entryNumber} is missing intent.`);
+  }
+}
+
+function hasSubjectLikeReference(resource: Record<string, unknown>) {
+  return isRecord(resource.subject) || isRecord(resource.patient);
+}
+
+function isCodeableConcept(value: unknown) {
+  if (!isRecord(value)) return false;
+  if (typeof value.text === "string" && value.text.trim()) return true;
+  return Array.isArray(value.coding) && value.coding.length > 0;
+}
+
+function validateCodeableConcept(value: unknown, label: string, warnings: string[]) {
+  if (!isRecord(value) || !Array.isArray(value.coding)) return;
+  value.coding.forEach((coding, index) => {
+    if (!isRecord(coding)) {
+      warnings.push(`${label} coding ${index + 1} is not an object.`);
+      return;
+    }
+    if (typeof coding.system !== "string" || !coding.system.startsWith("http")) {
+      warnings.push(`${label} coding ${index + 1} has no absolute terminology system URI.`);
+    }
+    if (typeof coding.code !== "string" || !coding.code) warnings.push(`${label} coding ${index + 1} is missing code.`);
+  });
 }
 
 function validateClinicalEntity(value: unknown, index: number) {

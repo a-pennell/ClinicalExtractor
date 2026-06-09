@@ -1,6 +1,28 @@
 # API Contract Skeleton
 
-This prototype is browser-local today. These contracts define the next backend shape without requiring a database yet.
+This prototype is browser-local today. These contracts define the backend shape and the deployed static server exposes a lightweight operational subset without requiring a database yet.
+
+## Implemented Server Routes
+
+`GET /api/health`
+
+Returns deployment health, service name, timestamp, and the current extraction mode.
+
+`GET /api/providers`
+
+Returns local, mock, disabled, and future provider manifests for extraction and terminology.
+
+`POST /api/sessions`
+
+Creates an in-memory prototype session with `id`, `specialty`, and `sourceText`.
+
+`POST /api/sessions/:id/extract`
+
+Returns the in-memory session with `status: "client-extraction-required"` and an empty `entities` array until a server-side extractor is configured. The client-side local rules remain the source of truth for this prototype.
+
+`GET /api/sessions/:id/export/:type`
+
+Returns in-memory prototype session metadata. Persistent export generation is still a backend follow-up.
 
 ## Extraction Providers
 

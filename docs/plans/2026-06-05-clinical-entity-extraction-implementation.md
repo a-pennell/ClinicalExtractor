@@ -120,6 +120,16 @@ Build a lo-fi local clinical entity extraction prototype for primary care, menta
 - [x] T071: Add selected-entity async terminology lookup and expansion UI.
 - [x] T072: Add component regression tests for Eval Lab loading, relation review, and terminology demo behavior.
 
+### Batch 15: Hardening & Operational Finish
+
+- [x] T073: Broaden the ASHA-sourced abbreviation starter registry while preserving ambiguity warnings for overlapping shorthand.
+- [x] T074: Score abbreviation resolution from mention-local evidence before document-wide specialty context.
+- [x] T075: Surface abbreviation evidence and mention counts in entity detail review.
+- [x] T076: Add local FHIR Bundle quality checks for required resource shape, ids, subjects, coding URIs, and Observation values.
+- [x] T077: Add deployed server health, provider-manifest, and in-memory session API endpoints.
+- [x] T078: Add a dependency-free Railway deployment smoke script and documentation.
+- [x] T079: Add regression tests for abbreviation evidence and FHIR quality validation.
+
 ## Review Checkpoints
 
 - Batch 1 complete: project installs and scripts are available.
@@ -136,3 +146,4 @@ Build a lo-fi local clinical entity extraction prototype for primary care, menta
 - Batch 12 complete: section-aware extraction, inferred relations, uncertainty cues, provider adapter shape, eval fixtures, and latest-session persistence are available and covered by automated tests.
 - Batch 13 complete: the synthetic eval set covers five notes per context, and the async mock terminology provider supports lookup/expand-shaped integration tests without external calls.
 - Batch 14 complete: the eval set is visible and actionable in the prototype, relation links are reviewable, and mock terminology lookup/search can be exercised from the UI.
+- Batch 15 complete: abbreviation disambiguation is evidence-aware, the ASHA-backed registry is broader, FHIR previews have local structural quality checks, and Railway exposes smoke-testable operational API endpoints.
