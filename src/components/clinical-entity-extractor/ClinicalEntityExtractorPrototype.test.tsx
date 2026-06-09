@@ -80,6 +80,8 @@ describe("ClinicalEntityExtractorPrototype", () => {
     expect(screen.getByText("document output")).toBeTruthy();
     expect(screen.getByText("Session JSON")).toBeTruthy();
     expect(screen.getByText("FHIR Bundle")).toBeTruthy();
+    expect(screen.getByLabelText("FHIR quality")).toBeTruthy();
+    expect(screen.getByText("Local checks passed")).toBeTruthy();
     expect(screen.getByRole("button", { name: /copy json/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /download json/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /copy fhir/i })).toBeTruthy();

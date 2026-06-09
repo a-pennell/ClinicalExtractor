@@ -47,7 +47,7 @@ API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md). The produ
 - Highlighted source spans linked to unique structured entities.
 - Entity detail review with assertion, confidence, coding, relation, and reviewer-state controls.
 - Starter terminology candidates for ICD-10-CM, SNOMED CT, LOINC, RxNorm, CPT, and HCPCS.
-- Document-level JSON, FHIR Bundle preview, reviewer report, and clipboard summary exports.
+- Document-level JSON, FHIR Bundle preview, reviewer report, clipboard summary exports, and visible FHIR quality summary.
 - ASHA-sourced abbreviation registry starter with context-aware ambiguity review for overlapping shorthand.
 - Local FHIR Bundle quality checks for prototype resource shape, required ids, coding URIs, subjects, and Observation values.
 - Browser-side session persistence: latest-session localStorage compatibility plus an IndexedDB session library for multiple saved review cases.

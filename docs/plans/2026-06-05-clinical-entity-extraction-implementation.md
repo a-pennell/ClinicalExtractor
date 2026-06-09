@@ -130,6 +130,12 @@ Build a lo-fi local clinical entity extraction prototype for primary care, menta
 - [x] T078: Add a dependency-free Railway deployment smoke script and documentation.
 - [x] T079: Add regression tests for abbreviation evidence and FHIR quality validation.
 
+### Batch 16: Reviewer-Visible FHIR Quality
+
+- [x] T080: Show local FHIR quality pass/fail state in the document output panel.
+- [x] T081: Show FHIR resource counts by resource type plus warning and error counts.
+- [x] T082: Add component regression coverage for visible FHIR quality output.
+
 ## Review Checkpoints
 
 - Batch 1 complete: project installs and scripts are available.
@@ -147,3 +153,4 @@ Build a lo-fi local clinical entity extraction prototype for primary care, menta
 - Batch 13 complete: the synthetic eval set covers five notes per context, and the async mock terminology provider supports lookup/expand-shaped integration tests without external calls.
 - Batch 14 complete: the eval set is visible and actionable in the prototype, relation links are reviewable, and mock terminology lookup/search can be exercised from the UI.
 - Batch 15 complete: abbreviation disambiguation is evidence-aware, the ASHA-backed registry is broader, FHIR previews have local structural quality checks, and Railway exposes smoke-testable operational API endpoints.
+- Batch 16 complete: reviewers can see local FHIR Bundle quality status and resource mix before copying or downloading exports.

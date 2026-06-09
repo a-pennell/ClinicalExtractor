@@ -6,6 +6,7 @@ import {
   buildFhirBundle,
   buildReviewerReport
 } from "../../lib/clinical-extraction/documentOutput";
+import { validateFhirBundleQuality } from "../../lib/clinical-extraction/schemaValidation";
 import type { ClinicalEntity, Specialty } from "../../lib/clinical-extraction/types";
 
 type DocumentOutputPanelProps = {
@@ -20,9 +21,11 @@ export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutpu
   const bundle = buildFhirBundle(entities);
   const reviewerReport = buildReviewerReport(text, specialty, entities);
   const clipboardSummary = buildClipboardSummary(entities);
+  const fhirQuality = validateFhirBundleQuality(bundle);
   const sessionJson = JSON.stringify(session, null, 2);
   const bundleJson = JSON.stringify(bundle, null, 2);
   const typeEntries = Object.entries(session.summary.byType).sort(([a], [b]) => a.localeCompare(b));
+  const fhirTypeEntries = Object.entries(fhirQuality.summary.resourceTypes).sort(([a], [b]) => a.localeCompare(b));
   const usedTerminologySystems = session.terminology.systems.filter(
     (system) => system.candidateCount > 0 || system.selectedCount > 0
   );
@@ -97,6 +100,29 @@ export function DocumentOutputPanel({ text, specialty, entities }: DocumentOutpu
               <span>No terminology candidates in this extraction.</span>
             )}
           </div>
+        </div>
+        <div className={`fhir-quality ${fhirQuality.ok ? "pass" : "fail"}`} aria-label="FHIR quality">
+          <div>
+            <strong>FHIR quality</strong>
+            <span>{fhirQuality.ok ? "Local checks passed" : "Needs attention"}</span>
+          </div>
+          <div>
+            <span>{fhirQuality.summary.resourceCount} resources</span>
+            {fhirTypeEntries.map(([resourceType, count]) => (
+              <span key={resourceType}>
+                {resourceType}: {count}
+              </span>
+            ))}
+            <span>{fhirQuality.errors.length} errors</span>
+            <span>{fhirQuality.warnings.length} warnings</span>
+          </div>
+          {(fhirQuality.errors.length > 0 || fhirQuality.warnings.length > 0) && (
+            <ul>
+              {fhirQuality.errors.concat(fhirQuality.warnings).slice(0, 4).map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="review-actions export-actions" aria-label="Export and share actions">
           <button className="secondary-button" type="button" onClick={() => copyText("Session JSON", sessionJson)}>
