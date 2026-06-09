@@ -7,6 +7,15 @@ describe("ClinicalEntityExtractorPrototype", () => {
     window.localStorage.clear();
   });
 
+  it("labels the primary workbench columns as input and output", () => {
+    render(<ClinicalEntityExtractorPrototype />);
+
+    expect(screen.getByRole("region", { name: "Input" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Output" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Input" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Output" })).toBeTruthy();
+  });
+
   it("clears extracted entities when the source text is deleted", () => {
     render(<ClinicalEntityExtractorPrototype />);
 

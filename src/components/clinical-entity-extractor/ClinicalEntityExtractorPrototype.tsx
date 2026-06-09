@@ -378,11 +378,11 @@ export function ClinicalEntityExtractorPrototype() {
       </header>
 
       <section className="workspace-grid">
-        <section className="note-panel" aria-label="Clinical note input">
+        <section className="note-panel" aria-label="Input">
           <div className="panel-heading">
             <div>
-              <h2>Source note</h2>
-              <p>Paste rough clinical shorthand, then extract local structured entities.</p>
+              <h2>Input</h2>
+              <p>Paste or type clinical text, then run local extraction.</p>
             </div>
             <Activity size={20} aria-hidden="true" />
           </div>
@@ -537,11 +537,11 @@ export function ClinicalEntityExtractorPrototype() {
           <EvalLabPanel onLoadFixture={loadEvalFixture} />
         </section>
 
-        <section className="review-panel" aria-label="Extraction review">
+        <section className="review-panel" aria-label="Output">
           <div className="panel-heading">
             <div>
-              <h2>Source spans</h2>
-              <p>Matched text remains linked to the structured entity.</p>
+              <h2>Output</h2>
+              <p>Review extracted spans, entities, coding candidates, and exports.</p>
             </div>
             <ClipboardList size={20} aria-hidden="true" />
           </div>
