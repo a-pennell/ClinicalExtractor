@@ -194,6 +194,21 @@ describe("ClinicalEntityExtractorPrototype", () => {
     expect(screen.getByText("mixed-diabetes-depression")).toBeTruthy();
   });
 
+  it("shows the technical pipeline lab without changing the clinician workflow", () => {
+    render(<ClinicalEntityExtractorPrototype />);
+
+    fireEvent.click(screen.getByText("Pipeline lab"));
+
+    expect(screen.getByLabelText("Extraction mode preview")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Rules" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "LLM" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Hybrid" })).toBeTruthy();
+    expect(screen.getByText("Feature matrix preview")).toBeTruthy();
+    expect(screen.getByText("pain_rating__missing")).toBeTruthy();
+    expect(screen.getByText("Validation")).toBeTruthy();
+    expect(screen.getByLabelText("Pipeline metrics")).toBeTruthy();
+  });
+
   it("lets reviewers adjudicate inferred entity relations", () => {
     render(<ClinicalEntityExtractorPrototype />);
 

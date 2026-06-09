@@ -34,6 +34,7 @@ import { EntityDetailPanel } from "./EntityDetailPanel";
 import { EvalLabPanel } from "./EvalLabPanel";
 import { ExtractedEntityPanel } from "./ExtractedEntityPanel";
 import { HighlightedClinicalText } from "./HighlightedClinicalText";
+import { PipelineLabPanel } from "./PipelineLabPanel";
 import { SpecialtySelector } from "./SpecialtySelector";
 
 const defaultText = sampleInputs["primary-care"];
@@ -535,6 +536,7 @@ export function ClinicalEntityExtractorPrototype() {
           </button>
 
           <EvalLabPanel onLoadFixture={loadEvalFixture} />
+          <PipelineLabPanel text={text} entities={entities} />
         </section>
 
         <section className="review-panel" aria-label="Output">
