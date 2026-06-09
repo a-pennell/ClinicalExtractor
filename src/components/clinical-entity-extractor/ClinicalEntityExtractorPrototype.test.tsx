@@ -200,9 +200,11 @@ describe("ClinicalEntityExtractorPrototype", () => {
     fireEvent.click(screen.getByText("Pipeline lab"));
 
     expect(screen.getByLabelText("Extraction mode preview")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Rules" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "NLP" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "NLP + ML" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "NLP + LLM" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "LLM" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Hybrid" })).toBeTruthy();
+    expect(screen.getByLabelText("Prototype ML risk score")).toBeTruthy();
     expect(screen.getByText("Feature matrix preview")).toBeTruthy();
     expect(screen.getByText("pain_rating__missing")).toBeTruthy();
     expect(screen.getByText("Validation")).toBeTruthy();

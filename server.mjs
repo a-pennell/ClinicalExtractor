@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 
@@ -6,6 +6,7 @@ const root = resolve("dist");
 const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 4173);
 const sessions = new Map();
+const riskModelArtifact = JSON.parse(readFileSync(join(process.cwd(), "src/lib/clinical-extraction/ml/riskModelArtifact.json"), "utf8"));
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -115,6 +116,32 @@ async function handleApiRequest(request, response, url) {
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/risk/predict") {
+    const body = await readJsonBody(request, response);
+    if (!body) return;
+    if (!body.features || typeof body.features !== "object" || Array.isArray(body.features)) {
+      sendJson(response, 400, { error: "Request body must include a features object." });
+      return;
+    }
+
+    const features = sanitizeRiskFeatures(body.features, riskModelArtifact.featureNames);
+    const prediction = scoreRiskFeatures(features, riskModelArtifact);
+    sendJson(response, 200, {
+      prediction,
+      features,
+      model: {
+        id: riskModelArtifact.modelId,
+        version: riskModelArtifact.version,
+        trainedAt: riskModelArtifact.trainedAt,
+        outcomeLabel: riskModelArtifact.outcomeLabel,
+        trainingData: riskModelArtifact.trainingData,
+        calibration: riskModelArtifact.calibration
+      },
+      warning: "Prototype risk prediction is trained only on mock labels and is not clinically validated."
+    });
+    return;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/sessions") {
     const body = await readJsonBody(request, response);
     if (!body) return;
@@ -195,4 +222,64 @@ function sendJson(response, status, payload) {
     "X-Content-Type-Options": "nosniff"
   });
   response.end(JSON.stringify(payload, null, 2));
+}
+
+function sanitizeRiskFeatures(input, featureNames) {
+  return Object.fromEntries(
+    featureNames.map((feature) => {
+      const value = Number(input[feature]);
+      return [feature, Number.isFinite(value) ? value : 0];
+    })
+  );
+}
+
+function scoreRiskFeatures(features, artifact) {
+  const contributions = artifact.featureNames.map((feature) => {
+    const normalizedValue = normalizeRiskFeature(feature, features, artifact.normalization[feature]);
+    return {
+      feature,
+      contribution: normalizedValue * artifact.weights[feature],
+      rawValue: features[feature]
+    };
+  });
+  const logit = contributions.reduce((sum, item) => sum + item.contribution, artifact.intercept);
+  const probability = Number(sigmoid(logit).toFixed(3));
+  const band = probability >= artifact.thresholds.high ? "high" : probability >= artifact.thresholds.low ? "moderate" : "low";
+
+  return {
+    probability,
+    band,
+    decision: probability >= artifact.thresholds.decision ? "above-threshold" : "below-threshold",
+    threshold: artifact.thresholds.decision,
+    drivers: contributions
+      .filter((item) => Math.abs(item.contribution) >= 0.08)
+      .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+      .slice(0, 5)
+      .map((item) => ({
+        feature: item.feature,
+        contribution: Number(item.contribution.toFixed(3)),
+        rawValue: item.rawValue
+      }))
+  };
+}
+
+function normalizeRiskFeature(feature, features, spec) {
+  const value = getRiskModelFeatureValue(feature, features, spec?.center ?? 0);
+  if (!Number.isFinite(value) || !Number.isFinite(spec?.scale) || spec.scale === 0) return 0;
+  return (value - spec.center) / spec.scale;
+}
+
+function getRiskModelFeatureValue(feature, features, neutralValue) {
+  if (feature === "heart_rate__mean" && features.heart_rate__missing === 1) return neutralValue;
+  if ((feature === "bp_systolic__last" || feature === "bp_diastolic__last") && features.bp_missing === 1) return neutralValue;
+  return features[feature];
+}
+
+function sigmoid(value) {
+  if (value >= 0) {
+    const z = Math.exp(-value);
+    return 1 / (1 + z);
+  }
+  const z = Math.exp(value);
+  return z / (1 + z);
 }

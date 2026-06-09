@@ -1,10 +1,13 @@
 import { buildEvaluationCoverageDashboard } from "./evaluationFixtures";
+import { mockRiskDataset } from "./ml/mockRiskDataset";
+import { evaluateRiskModel, predictRisk } from "./ml/riskModel";
+import { buildRiskFeatureSet, type RiskFeaturePreviewRow } from "./ml/riskFeatures";
 import type { ClinicalEntity } from "./types";
 
-export type PipelineMode = "rules" | "llm" | "hybrid";
+export type PipelineMode = "nlp" | "nlp-ml" | "nlp-llm" | "llm";
 
 export type PipelineMetricRow = {
-  mode: "Rules" | "LLM" | "Hybrid" | "Classic ML";
+  mode: "NLP" | "NLP + ML" | "NLP + LLM" | "LLM";
   precision?: number;
   recall?: number;
   f1?: number;
@@ -13,10 +16,18 @@ export type PipelineMetricRow = {
   status: string;
 };
 
-export type FeaturePreviewRow = {
-  feature: string;
-  value: string | number | boolean | null;
-  meaning: string;
+export type FeaturePreviewRow = RiskFeaturePreviewRow;
+
+export type PrototypeRiskScore = {
+  label: string;
+  probability: number;
+  band: "low" | "moderate" | "high";
+  decision: "below-threshold" | "above-threshold";
+  threshold: number;
+  modelVersion: string;
+  outcomeLabel: string;
+  drivers: string[];
+  disclaimer: string;
 };
 
 export type PipelineValidationIssue = {
@@ -36,6 +47,7 @@ export type TriageBlock = {
 export type PipelineLabSnapshot = {
   metrics: PipelineMetricRow[];
   featureRows: FeaturePreviewRow[];
+  riskScore: PrototypeRiskScore;
   validationIssues: PipelineValidationIssue[];
   triageBlocks: TriageBlock[];
   ruleHandledCount: number;
@@ -62,10 +74,12 @@ export function buildPipelineLabSnapshot(text: string, entities: ClinicalEntity[
   const validationIssues = buildValidationIssues(entities);
   const triageBlocks = buildTriageBlocks(text, entities, validationIssues);
   const llmEscalationCount = triageBlocks.filter((block) => block.route === "LLM").length;
+  const riskFeatures = buildRiskFeatureSet(entities);
 
   return {
     metrics: buildMetricRows(),
-    featureRows: buildFeatureRows(entities),
+    featureRows: riskFeatures.rows,
+    riskScore: predictRisk(riskFeatures.vector),
     validationIssues,
     triageBlocks,
     ruleHandledCount: entities.length,
@@ -76,76 +90,31 @@ export function buildPipelineLabSnapshot(text: string, entities: ClinicalEntity[
 
 function buildMetricRows(): PipelineMetricRow[] {
   const dashboard = buildEvaluationCoverageDashboard();
+  const mlMetrics = evaluateRiskModel(mockRiskDataset);
   return [
     {
-      mode: "Rules",
+      mode: "NLP",
       precision: dashboard.precision,
       recall: dashboard.recall,
       f1: dashboard.f1,
       status: "Synthetic eval set"
     },
     {
-      mode: "LLM",
-      status: "Pending structured LLM runs"
+      mode: "NLP + ML",
+      precision: mlMetrics.precision,
+      recall: mlMetrics.recall,
+      f1: mlMetrics.f1,
+      rocAuc: mlMetrics.rocAuc,
+      prAuc: mlMetrics.prAuc,
+      status: `Mock holdout n=${mlMetrics.n} · threshold ${mlMetrics.threshold}`
     },
     {
-      mode: "Hybrid",
+      mode: "NLP + LLM",
       status: "Pending cascade eval"
     },
     {
-      mode: "Classic ML",
-      status: "Needs labels for ROC-AUC / PR-AUC"
-    }
-  ];
-}
-
-function buildFeatureRows(entities: ClinicalEntity[]): FeaturePreviewRow[] {
-  const painValues = numericValues(entities, "pain rating");
-  const phq9Values = numericValues(entities, "Patient Health Questionnaire-9");
-  const heartRateValues = numericValues(entities, "heart rate");
-  const bloodPressure = [...entities].reverse().find((entity) => entity.canonicalName === "blood pressure");
-  const suicidalIdeation = entities.filter((entity) => entity.canonicalName === "suicidal ideation");
-
-  return [
-    {
-      feature: "entity_count",
-      value: entities.length,
-      meaning: "Total structured mentions available for downstream models."
-    },
-    {
-      feature: "pain_rating__last",
-      value: lastValue(painValues),
-      meaning: "Most recent present pain rating; null means not extracted."
-    },
-    {
-      feature: "pain_rating__missing",
-      value: painValues.length === 0,
-      meaning: "Preserves extraction absence separately from a clinical denial."
-    },
-    {
-      feature: "heart_rate__mean",
-      value: meanValue(heartRateValues),
-      meaning: "Mean extracted HR across present mentions in the note."
-    },
-    {
-      feature: "bp_systolic__last",
-      value: parseNumeric(bloodPressure?.attributes?.systolic),
-      meaning: "Last extracted systolic BP value."
-    },
-    {
-      feature: "bp_diastolic__last",
-      value: parseNumeric(bloodPressure?.attributes?.diastolic),
-      meaning: "Last extracted diastolic BP value."
-    },
-    {
-      feature: "phq9__max",
-      value: maxValue(phq9Values),
-      meaning: "Highest PHQ-9 value in the current note."
-    },
-    {
-      feature: "si__explicitly_negated",
-      value: suicidalIdeation.some((entity) => entity.attributes?.assertion === "absent"),
-      meaning: "Distinguishes documented denial from missing SI documentation."
+      mode: "LLM",
+      status: "Pending structured LLM runs"
     }
   ];
 }
@@ -247,13 +216,6 @@ function buildCompressedContext(text: string, entities: ClinicalEntity[], triage
   return compressed || text.trim().slice(0, 700);
 }
 
-function numericValues(entities: ClinicalEntity[], canonicalName: string) {
-  return entities
-    .filter((entity) => entity.canonicalName === canonicalName && entity.attributes?.assertion !== "absent")
-    .map((entity) => parseNumeric(entity.attributes?.value))
-    .filter((value): value is number => value !== null);
-}
-
 function parsePainSeverity(entity: ClinicalEntity) {
   const severity = parseNumeric(entity.attributes?.severity);
   if (severity !== null) return severity;
@@ -267,19 +229,6 @@ function parseNumeric(value?: string | number) {
   if (value === undefined || value === null || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function lastValue(values: number[]) {
-  return values.length ? values[values.length - 1] : null;
-}
-
-function maxValue(values: number[]) {
-  return values.length ? Math.max(...values) : null;
-}
-
-function meanValue(values: number[]) {
-  if (!values.length) return null;
-  return Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1));
 }
 
 function buildIssue(entity: ClinicalEntity, severity: PipelineValidationIssue["severity"], message: string) {

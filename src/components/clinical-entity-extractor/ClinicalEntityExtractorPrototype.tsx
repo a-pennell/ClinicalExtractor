@@ -358,24 +358,6 @@ export function ClinicalEntityExtractorPrototype() {
           <p className="eyebrow">Clinical text prototype</p>
           <h1>Structured entity extraction workbench</h1>
         </div>
-        <div className="topbar-metrics" aria-label="Extraction summary">
-          <div>
-            <span>{entities.length}</span>
-            entities
-          </div>
-          <div>
-            <span>{selectedCodingCount}</span>
-            selected codes
-          </div>
-          <div>
-            <span>{reviewedEntityCount}</span>
-            reviewed
-          </div>
-          <div>
-            <span>{highPriorityCount}</span>
-            high priority
-          </div>
-        </div>
       </header>
 
       <section className="workspace-grid">
@@ -546,6 +528,25 @@ export function ClinicalEntityExtractorPrototype() {
               <p>Review extracted spans, entities, coding candidates, and exports.</p>
             </div>
             <ClipboardList size={20} aria-hidden="true" />
+          </div>
+
+          <div className="output-metrics" aria-label="Extraction summary">
+            <div>
+              <span>{entities.length}</span>
+              entities
+            </div>
+            <div>
+              <span>{selectedCodingCount}</span>
+              selected codes
+            </div>
+            <div>
+              <span>{reviewedEntityCount}</span>
+              reviewed
+            </div>
+            <div>
+              <span>{highPriorityCount}</span>
+              high priority
+            </div>
           </div>
 
           <div className="section-strip" aria-label="Detected sections">

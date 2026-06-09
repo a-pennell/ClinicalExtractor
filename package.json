@@ -9,6 +9,7 @@
     "start": "node server.mjs",
     "preview": "vite preview",
     "smoke:deployment": "node scripts/deployment-smoke-test.mjs",
+    "train:risk-model": "node scripts/train-risk-model.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
