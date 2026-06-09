@@ -17,8 +17,11 @@ export type EvaluationCaseResult = {
   id: string;
   specialty: Specialty;
   expectedCount: number;
+  foundCount: number;
   matchedCount: number;
+  precision: number;
   recall: number;
+  f1: number;
   expectedCanonicalNames: string[];
   foundCanonicalNames: string[];
   missedCanonicalNames: string[];
@@ -28,30 +31,38 @@ export type EvaluationCaseResult = {
 export type EvaluationResult = {
   caseResults: EvaluationCaseResult[];
   totalExpected: number;
+  totalFound: number;
   totalMatched: number;
+  precision: number;
   recall: number;
+  f1: number;
 };
 
 export type CoverageMetricRow<T extends string> = {
   key: T;
   expectedCount?: number;
+  foundCount?: number;
   matchedCount?: number;
   missedCount?: number;
   extraCount?: number;
-  foundCount?: number;
   codedEntityCount?: number;
   candidateCount?: number;
   selectedCount?: number;
+  precision?: number;
   recall?: number;
+  f1?: number;
 };
 
 export type EvaluationCoverageDashboard = {
   totalNotes: number;
   totalExpected: number;
+  totalFound: number;
   totalMatched: number;
   totalMissed: number;
   totalExtra: number;
+  precision: number;
   recall: number;
+  f1: number;
   bySpecialty: CoverageMetricRow<Specialty>[];
   byEntityType: CoverageMetricRow<ClinicalEntityType>[];
   byAssertion: CoverageMetricRow<AssertionStatus>[];
@@ -367,13 +378,19 @@ export function evaluateExtractionFixtures(fixtures: EvaluationFixture[] = evalu
   const caseResults = fixtures.map(evaluateFixture);
 
   const totalExpected = caseResults.reduce((sum, result) => sum + result.expectedCount, 0);
+  const totalFound = caseResults.reduce((sum, result) => sum + result.foundCount, 0);
   const totalMatched = caseResults.reduce((sum, result) => sum + result.matchedCount, 0);
+  const precision = calculatePrecision(totalMatched, totalFound);
+  const recall = calculateRecall(totalMatched, totalExpected);
 
   return {
     caseResults,
     totalExpected,
+    totalFound,
     totalMatched,
-    recall: totalExpected ? totalMatched / totalExpected : 1
+    precision,
+    recall,
+    f1: calculateF1(precision, recall)
   };
 }
 
@@ -387,13 +404,18 @@ export function evaluateFixture(fixture: EvaluationFixture): EvaluationCaseResul
   const missedCanonicalNames = expectedCanonicalNames.filter((canonicalName) => !foundSet.has(canonicalName));
   const extraCanonicalNames = foundCanonicalNames.filter((canonicalName) => !expectedSet.has(canonicalName));
   const matchedCount = expectedCanonicalNames.length - missedCanonicalNames.length;
+  const precision = calculatePrecision(matchedCount, foundCanonicalNames.length);
+  const recall = calculateRecall(matchedCount, expectedCanonicalNames.length);
 
   return {
     id: fixture.id,
     specialty: fixture.specialty,
     expectedCount: expectedCanonicalNames.length,
+    foundCount: foundCanonicalNames.length,
     matchedCount,
-    recall: expectedCanonicalNames.length ? matchedCount / expectedCanonicalNames.length : 1,
+    precision,
+    recall,
+    f1: calculateF1(precision, recall),
     expectedCanonicalNames,
     foundCanonicalNames,
     missedCanonicalNames,
@@ -450,10 +472,13 @@ export function buildEvaluationCoverageDashboard(fixtures: EvaluationFixture[] =
   return {
     totalNotes: fixtures.length,
     totalExpected: result.totalExpected,
+    totalFound: result.totalFound,
     totalMatched: result.totalMatched,
     totalMissed,
     totalExtra,
+    precision: result.precision,
     recall: result.recall,
+    f1: result.f1,
     bySpecialty: buildSpecialtyRows(result),
     byEntityType: buildEntityTypeRows(extractionRows),
     byAssertion: buildAssertionRows(extractionRows),
@@ -474,15 +499,34 @@ function buildSpecialtyRows(result: EvaluationResult): CoverageMetricRow<Special
   result.caseResults.forEach((caseResult) => {
     const row = rows[caseResult.specialty];
     row.expectedCount = (row.expectedCount ?? 0) + caseResult.expectedCount;
+    row.foundCount = (row.foundCount ?? 0) + caseResult.foundCount;
     row.matchedCount = (row.matchedCount ?? 0) + caseResult.matchedCount;
     row.missedCount = (row.missedCount ?? 0) + caseResult.missedCanonicalNames.length;
     row.extraCount = (row.extraCount ?? 0) + caseResult.extraCanonicalNames.length;
   });
 
-  return Object.values(rows).map((row) => ({
-    ...row,
-    recall: row.expectedCount ? (row.matchedCount ?? 0) / row.expectedCount : 1
-  }));
+  return Object.values(rows).map((row) => {
+    const precision = calculatePrecision(row.matchedCount ?? 0, row.foundCount ?? 0);
+    const recall = calculateRecall(row.matchedCount ?? 0, row.expectedCount ?? 0);
+    return {
+      ...row,
+      precision,
+      recall,
+      f1: calculateF1(precision, recall)
+    };
+  });
+}
+
+function calculatePrecision(matchedCount: number, foundCount: number) {
+  return foundCount ? matchedCount / foundCount : 1;
+}
+
+function calculateRecall(matchedCount: number, expectedCount: number) {
+  return expectedCount ? matchedCount / expectedCount : 1;
+}
+
+function calculateF1(precision: number, recall: number) {
+  return precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
 }
 
 function buildEntityTypeRows(
@@ -543,16 +587,17 @@ function buildTerminologyRows(
 
 function emptySpecialtyRows() {
   return {
-    "primary-care": { key: "primary-care", expectedCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 },
-    "mental-health": { key: "mental-health", expectedCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 },
+    "primary-care": { key: "primary-care", expectedCount: 0, foundCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 },
+    "mental-health": { key: "mental-health", expectedCount: 0, foundCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 },
     "physical-therapy": {
       key: "physical-therapy",
       expectedCount: 0,
+      foundCount: 0,
       matchedCount: 0,
       missedCount: 0,
       extraCount: 0
     },
-    mixed: { key: "mixed", expectedCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 }
+    mixed: { key: "mixed", expectedCount: 0, foundCount: 0, matchedCount: 0, missedCount: 0, extraCount: 0 }
   } satisfies Record<Specialty, CoverageMetricRow<Specialty>>;
 }
 

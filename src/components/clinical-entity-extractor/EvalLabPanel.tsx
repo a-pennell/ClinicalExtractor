@@ -45,7 +45,7 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
         <div>
           <h2>Eval lab</h2>
           <p>
-            {evaluationFixtures.length} mock notes · {Math.round(overallResult.recall * 100)}% recall · {backlog.length} gaps
+            {evaluationFixtures.length} mock notes · {formatPercent(overallResult.f1)} F1 · {backlog.length} gaps
           </p>
         </div>
         <FlaskConical size={19} aria-hidden="true" />
@@ -58,7 +58,15 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
             mock notes
           </div>
           <div>
-            <strong>{Math.round(overallResult.recall * 100)}%</strong>
+            <strong>{formatPercent(overallResult.f1)}</strong>
+            F1 score
+          </div>
+          <div>
+            <strong>{formatPercent(overallResult.precision)}</strong>
+            precision
+          </div>
+          <div>
+            <strong>{formatPercent(overallResult.recall)}</strong>
             recall
           </div>
           <div>
@@ -71,21 +79,25 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
         <div className="coverage-dashboard-header">
           <h3>Coverage dashboard</h3>
           <span>
-            {coverageDashboard.totalMatched}/{coverageDashboard.totalExpected} expected · {coverageDashboard.totalExtra} extra
+            F1 {formatPercent(coverageDashboard.f1)} · {coverageDashboard.totalMatched}/{coverageDashboard.totalExpected} expected · {coverageDashboard.totalExtra} extra
           </span>
         </div>
 
-        <div className="coverage-table" role="table" aria-label="Recall by specialty">
+        <div className="coverage-table" role="table" aria-label="Evaluation metrics by specialty">
           <div className="coverage-row coverage-row-header" role="row">
             <span>Context</span>
+            <span>F1</span>
+            <span>Prec.</span>
             <span>Recall</span>
-            <span>Missed</span>
+            <span>Miss</span>
             <span>Extra</span>
           </div>
           {coverageDashboard.bySpecialty.map((row) => (
             <div className="coverage-row" role="row" key={row.key}>
               <span>{specialtyLabels[row.key]}</span>
-              <span>{Math.round((row.recall ?? 0) * 100)}%</span>
+              <span>{formatPercent(row.f1 ?? 0)}</span>
+              <span>{formatPercent(row.precision ?? 0)}</span>
+              <span>{formatPercent(row.recall ?? 0)}</span>
               <span>{row.missedCount ?? 0}</span>
               <span>{row.extraCount ?? 0}</span>
             </div>
@@ -169,8 +181,16 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
           found
         </div>
         <div>
-          <strong>{Math.round(selectedResult.recall * 100)}%</strong>
-          note recall
+          <strong>{formatPercent(selectedResult.f1)}</strong>
+          note F1
+        </div>
+        <div>
+          <strong>{formatPercent(selectedResult.precision)}</strong>
+          precision
+        </div>
+        <div>
+          <strong>{formatPercent(selectedResult.recall)}</strong>
+          recall
         </div>
         <div>
           <strong>{selectedResult.extraCanonicalNames.length}</strong>
@@ -207,6 +227,10 @@ export function EvalLabPanel({ onLoadFixture }: EvalLabPanelProps) {
       </div>
     </details>
   );
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value * 100)}%`;
 }
 
 function CoverageBarList({

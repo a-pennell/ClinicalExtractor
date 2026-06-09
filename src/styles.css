@@ -529,7 +529,7 @@ select:focus,
 
 .eval-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 7px;
   margin-bottom: 10px;
 }
@@ -593,14 +593,14 @@ select:focus,
 
 .coverage-row {
   display: grid;
-  grid-template-columns: minmax(96px, 1fr) 58px 54px 48px;
-  gap: 6px;
+  grid-template-columns: minmax(76px, 1.4fr) repeat(5, minmax(0, 0.55fr));
+  gap: 5px;
   min-height: 31px;
   align-items: center;
   border-top: 1px solid var(--line-soft);
-  padding: 6px 8px;
+  padding: 6px;
   color: var(--ink-muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
 }
 
 .coverage-row:first-child {

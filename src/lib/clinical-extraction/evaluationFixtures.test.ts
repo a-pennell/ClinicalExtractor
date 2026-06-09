@@ -32,7 +32,10 @@ describe("evaluationFixtures", () => {
       mixed: 5
     });
     expect(result.totalExpected).toBeGreaterThan(100);
+    expect(result.totalFound).toBeGreaterThanOrEqual(result.totalMatched);
+    expect(result.precision).toBeGreaterThan(0);
     expect(result.recall).toBeGreaterThanOrEqual(0.9);
+    expect(result.f1).toBeGreaterThan(0);
     expect(result.caseResults.flatMap((caseResult) => caseResult.missedCanonicalNames)).toEqual([]);
   });
 
@@ -41,9 +44,13 @@ describe("evaluationFixtures", () => {
 
     expect(dashboard.totalNotes).toBe(20);
     expect(dashboard.totalExpected).toBeGreaterThan(100);
+    expect(dashboard.totalFound).toBeGreaterThanOrEqual(dashboard.totalMatched);
     expect(dashboard.totalMissed).toBe(0);
+    expect(dashboard.precision).toBeGreaterThan(0);
+    expect(dashboard.f1).toBeGreaterThan(0);
     expect(dashboard.bySpecialty).toHaveLength(4);
     expect(dashboard.bySpecialty.every((row) => row.recall === 1)).toBe(true);
+    expect(dashboard.bySpecialty.every((row) => typeof row.f1 === "number")).toBe(true);
     expect(dashboard.byEntityType.some((row) => row.key === "problem" && (row.foundCount ?? 0) > 0)).toBe(true);
     expect(dashboard.byAssertion.some((row) => row.key === "absent" && (row.foundCount ?? 0) > 0)).toBe(true);
     expect(dashboard.byTerminologySystem.some((row) => row.key === "ICD-10-CM" && (row.candidateCount ?? 0) > 0)).toBe(true);
