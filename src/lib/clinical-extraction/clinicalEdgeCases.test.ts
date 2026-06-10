@@ -3,18 +3,22 @@ import { extractClinicalEntities } from "./extractClinicalEntities";
 import type { ClinicalEntity, ExtractionOptions } from "./types";
 
 /**
- * AUDIT EDGE-CASE TESTS (docs/pre-review-audit.md) — FROZEN LEGACY EXTRACTOR.
+ * AUDIT EDGE-CASE TESTS (docs/pre-review-audit.md).
  *
- * Post-ADR-001 these `it.fails` cases document gaps in the FROZEN in-browser
- * extractor that will NOT be fixed (the TS inference path is demoted to a
- * fallback). The authoritative, PASSING acceptance tests for this behavior run
- * against the Python engine:
+ * ADR-001 cutover is complete: the authoritative, PASSING acceptance tests for
+ * clinical assertion behavior run against the Python engine, NOT the frozen
+ * in-browser extractor. The former `it.fails` gap cases (termination cues, long
+ * denial lists, inline 'history of', 'rule out', conditional 'if X recurs') are
+ * now covered there:
  *   - tests/test_clinical_edge_cases.py  (resolver-level assertion vocabulary)
- *   - tests/test_engine_acceptance.py    (end-to-end envelope, ADR-001 §accept.)
+ *   - tests/test_engine_acceptance.py    (end-to-end envelope, ADR-001 accept.)
  *   - tests/test_rollup.py               (B6 conflict-aware rollup)
- * Laterality (C8) is handled in Phase 6; misspelling tolerance is gated on the
- * labeling plan (dictionary expansion is out of scope per the remediation
- * ground rules). These TS copies remain only as a record of the legacy gaps.
+ *
+ * What remains here are TS-side regression guards for fixes that live in the
+ * rendering/legacy path (B6 conflict surfacing, C8 laterality) plus one
+ * documented, still-open limitation (misspelling tolerance), which is gated on
+ * the labeling plan — dictionary expansion is out of scope per the remediation
+ * ground rules.
  */
 
 const options: ExtractionOptions = { specialty: "mixed", mode: "auto" };
@@ -22,42 +26,6 @@ const options: ExtractionOptions = { specialty: "mixed", mode: "auto" };
 function byName(text: string, canonicalName: string): ClinicalEntity | undefined {
   return extractClinicalEntities(text, options).find((entity) => entity.canonicalName === canonicalName);
 }
-
-describe("clinical edge cases: negation scope", () => {
-  it.fails("GAP: termination cue ('but') should end negation scope", () => {
-    // "cough" sits 13 chars after "No", inside the 36-char isNegated window;
-    // negationRules.ts has no termination cues, so the affirmed finding is
-    // reported absent.
-    const cough = byName("No fever but cough is present.", "cough");
-    expect(cough?.attributes?.assertion).toBe("present");
-  });
-
-  it.fails("GAP: negation should cover full denial lists, not a 36-char window", () => {
-    // "headache" falls outside the fixed lookbehind window and silently flips
-    // to PRESENT — a false positive finding from an explicit denial.
-    const headache = byName("No fever, chills, cough, vomiting, diarrhea, or headache.", "headache");
-    expect(headache?.attributes?.assertion).toBe("absent");
-  });
-});
-
-describe("clinical edge cases: temporality and subject", () => {
-  it.fails("GAP: inline 'history of X' outside a PMH section should not be an active finding", () => {
-    // Temporality is only inferred from section headers (past-medical-history);
-    // narrative "history of" is ignored.
-    const asthma = byName("History of asthma. Currently no wheezing.", "asthma");
-    expect(asthma?.attributes?.temporality).toBe("past");
-  });
-
-  it.fails("GAP: 'rule out X' should be hypothetical, not present", () => {
-    const asthma = byName("Rule out asthma.", "asthma");
-    expect(asthma?.attributes?.assertion).not.toBe("present");
-  });
-
-  it.fails("GAP: conditional 'if X recurs' should be hypothetical, not present", () => {
-    const chestPain = byName("If chest pain recurs, go to the ED.", "chest pain");
-    expect(chestPain?.attributes?.assertion).not.toBe("present");
-  });
-});
 
 describe("clinical edge cases: copy-forward and contradiction", () => {
   it("B6 FIXED: contradicting mentions roll up to 'conflicting' with high review priority", () => {
@@ -83,9 +51,13 @@ describe("clinical edge cases: laterality", () => {
   });
 });
 
-describe("clinical edge cases: lexical robustness", () => {
-  it.fails("GAP: common misspellings are dropped entirely (no fuzzy matching)", () => {
+describe("clinical edge cases: lexical robustness (OPEN, deferred)", () => {
+  it("documents the current limitation: misspellings are dropped (fuzzy matching gated on the labeling plan)", () => {
+    // Not yet fixed anywhere: there is no fuzzy/lexical-variant matching. This
+    // guard pins the CURRENT behavior so a future fix flips it deliberately;
+    // dictionary/lexicon expansion is driven by dev-split miss analysis, not by
+    // padding here (audit B4 discipline, annotation plan B4).
     const entities = extractClinicalEntities("Patient has diabetis and hypertention.", options);
-    expect(entities.length).toBeGreaterThan(0);
+    expect(entities).toHaveLength(0);
   });
 });
