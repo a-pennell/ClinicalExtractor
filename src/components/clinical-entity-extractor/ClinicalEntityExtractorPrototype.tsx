@@ -47,6 +47,7 @@ import { PipelineLabPanel } from "./PipelineLabPanel";
 import { SpecialtySelector } from "./SpecialtySelector";
 
 const defaultText = sampleInputs["primary-care"];
+type EngineMode = "checking" | "server" | "fallback";
 
 export function ClinicalEntityExtractorPrototype() {
   const [text, setText] = useState(defaultText);
@@ -63,12 +64,12 @@ export function ClinicalEntityExtractorPrototype() {
   const [savedSessions, setSavedSessions] = useState<SavedExtractionSession[]>([]);
   const [selectedSavedSessionId, setSelectedSavedSessionId] = useState("");
   const [sessionMessage, setSessionMessage] = useState("");
-  const [engineAvailable, setEngineAvailable] = useState(false);
+  const [engineMode, setEngineMode] = useState<EngineMode>("fallback");
 
   useEffect(() => {
     // ADR-001: prefer the server-side clinical_nlp engine when deployed
     // behind server.mjs; fall back to the frozen local extractor otherwise.
-    void probeEngineAvailability().then(setEngineAvailable);
+    void probeEngineAvailability().then((available) => setEngineMode(available ? "server" : "fallback"));
   }, []);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export function ClinicalEntityExtractorPrototype() {
   }
 
   function runExtraction(sourceText: string, options: { specialty?: Specialty; mode: "auto" | "override" }) {
-    if (engineAvailable) {
+    if (engineMode === "server") {
       void extractViaEngine(sourceText, options.specialty ?? "mixed").then((result) => {
         if (result) {
           applyEntities(result.entities);
@@ -92,6 +93,8 @@ export function ClinicalEntityExtractorPrototype() {
           }
           return;
         }
+        setEngineMode("fallback");
+        setSessionMessage("Server engine unavailable; using legacy local fallback.");
         applyEntities(extractClinicalEntityDocument(sourceText, options).entities);
       });
       return;
@@ -395,9 +398,17 @@ export function ClinicalEntityExtractorPrototype() {
           <div className="panel-heading">
             <div>
               <h2>Input</h2>
-              <p>Paste or type clinical text, then run local extraction.</p>
+              <p>Paste or type clinical text, then run extraction.</p>
             </div>
             <Activity size={20} aria-hidden="true" />
+          </div>
+
+          <div className={`engine-status-banner engine-${engineMode}`} role="status">
+            {engineMode === "server"
+              ? "Server clinical_nlp engine active."
+              : engineMode === "checking"
+                ? "Checking server engine; legacy local fallback is ready."
+                : "Server clinical_nlp engine unavailable; using legacy local fallback."}
           </div>
 
           <SpecialtySelector

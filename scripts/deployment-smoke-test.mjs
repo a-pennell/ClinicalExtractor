@@ -36,6 +36,18 @@ const checks = [
     }
   },
   {
+    label: "engine health",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/engine/health`);
+      const body = await response.json();
+      assert(response.ok, `Expected /api/engine/health to return 2xx, got ${response.status}`);
+      assert(body.ok === true, "Engine health response did not include ok=true.");
+      assert(body.engine?.status === "available", `Expected available engine, got ${body.engine?.status || "missing status"}.`);
+      assert(body.engine?.schemaVersion === "engine-1", "Engine health response is missing schemaVersion=engine-1.");
+      assert(typeof body.engine?.pythonVersion === "string" && body.engine.pythonVersion.startsWith("3."), "Engine health is missing Python version.");
+    }
+  },
+  {
     label: "server extraction engine",
     run: async () => {
       const response = await fetch(`${baseUrl}/api/sessions/test/extract`, {

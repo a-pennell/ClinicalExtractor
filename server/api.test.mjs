@@ -69,6 +69,57 @@ describe("toClientEntities (ADR-001 rendering adapter)", () => {
 });
 
 describe("POST /api/sessions/:id/extract", () => {
+  it("reports engine availability and safe health metadata", async () => {
+    const engine = {
+      extract: async () => sampleEnvelope,
+      ping: async () => ({
+        schema_version: "engine-1",
+        python_version: "3.11.9",
+        package: "clinical_nlp",
+        mode: "nlp"
+      })
+    };
+    const handler = createApiHandler({ engine, riskModelArtifact: { featureNames: [] }, sessions: new Map() });
+
+    const providersResponse = mockResponse();
+    await handler(jsonRequest("GET", {}), providersResponse, new URL("http://localhost/api/providers"));
+    expect(providersResponse.statusCode).toBe(200);
+    expect(providersResponse.body.extractionProviders[0]).toMatchObject({
+      id: "clinical-nlp-engine",
+      status: "available"
+    });
+
+    const healthResponse = mockResponse();
+    await handler(jsonRequest("GET", {}), healthResponse, new URL("http://localhost/api/engine/health"));
+    expect(healthResponse.statusCode).toBe(200);
+    expect(healthResponse.body.ok).toBe(true);
+    expect(healthResponse.body.engine).toMatchObject({
+      status: "available",
+      schemaVersion: "engine-1",
+      pythonVersion: "3.11.9",
+      package: "clinical_nlp",
+      mode: "nlp"
+    });
+  });
+
+  it("reports unavailable engine health without leaking exception text", async () => {
+    const engine = {
+      extract: async () => sampleEnvelope,
+      ping: async () => {
+        throw Object.assign(new Error("raw traceback with note text"), { code: "raw traceback with note text" });
+      }
+    };
+    const handler = createApiHandler({ engine, riskModelArtifact: { featureNames: [] }, sessions: new Map() });
+    const response = mockResponse();
+
+    await handler(jsonRequest("GET", {}), response, new URL("http://localhost/api/engine/health"));
+
+    expect(response.statusCode).toBe(503);
+    expect(response.body.engine.status).toBe("unavailable");
+    expect(response.body.engine.lastErrorCode).toBe("engine-error");
+    expect(JSON.stringify(response.body)).not.toContain("raw traceback");
+  });
+
   it("returns engine entities and surfaces escalation_failed", async () => {
     const engine = { extract: async () => ({ ...sampleEnvelope, escalation_failed: true }), ping: async () => ({}) };
     const handler = createApiHandler({ engine, riskModelArtifact: { featureNames: [] }, sessions: new Map() });

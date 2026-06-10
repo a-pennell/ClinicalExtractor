@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { createApiHandler } from "./server/api.mjs";
 import { createEngineClient } from "./server/engine.mjs";
+import { createEngineHealth } from "./server/engineHealth.mjs";
 
 const root = resolve("dist");
 const host = process.env.HOST || "0.0.0.0";
@@ -12,7 +13,8 @@ const riskModelArtifact = JSON.parse(readFileSync(join(process.cwd(), "src/lib/c
 
 // ADR-001: extraction is served by the Python clinical_nlp engine.
 const engine = createEngineClient();
-const handleApiRequest = createApiHandler({ engine, riskModelArtifact, sessions });
+const engineHealth = createEngineHealth();
+const handleApiRequest = createApiHandler({ engine, riskModelArtifact, sessions, engineHealth });
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -64,6 +66,9 @@ server.on("error", (error) => {
 
 server.listen(port, host, () => {
   console.log(`ClinicalExtractor serving dist on http://${host}:${port}`);
+  void engineHealth.check(engine, { startup: true }).then((health) => {
+    console.log(`clinical_nlp engine ${health.status}${health.schemaVersion ? ` (${health.schemaVersion})` : ""}`);
+  });
 });
 
 process.on("exit", () => engine.close());

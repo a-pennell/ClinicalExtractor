@@ -111,7 +111,17 @@ def handle_request(
     request_id = request.get("id")
     op = request.get("op")
     if op == "ping":
-        return {"id": request_id, "ok": True, "result": {"pong": True, "schema_version": ENGINE_SCHEMA_VERSION}}
+        return {
+            "id": request_id,
+            "ok": True,
+            "result": {
+                "pong": True,
+                "schema_version": ENGINE_SCHEMA_VERSION,
+                "python_version": ".".join(str(part) for part in sys.version_info[:3]),
+                "package": "clinical_nlp",
+                "mode": orchestrator.config.mode.value,
+            },
+        }
     if op == "extract":
         text = request.get("text")
         if not isinstance(text, str):

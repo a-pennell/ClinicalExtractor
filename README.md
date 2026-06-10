@@ -39,7 +39,7 @@ Post-deploy checklist: [docs/deployment-smoke-test.md](docs/deployment-smoke-tes
 
 Backend persistence design: [docs/backend-persistence-design.md](docs/backend-persistence-design.md).
 
-API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md). The production server also exposes lightweight `/api/health`, `/api/providers`, and in-memory session endpoints for deployment smoke tests.
+API contract skeleton: [docs/api-contracts.md](docs/api-contracts.md). The production server also exposes lightweight `/api/health`, `/api/engine/health`, `/api/providers`, and in-memory session endpoints for deployment smoke tests.
 
 ## Prototype Capabilities
 
@@ -64,4 +64,6 @@ Deployment smoke check after `npm run build` and `npm start`:
 ```bash
 npm run smoke:deployment -- http://127.0.0.1:4173
 ```
+
+Treat the same smoke command against the Railway public URL as a required post-deploy gate; it fails if the Python `clinical_nlp` engine is unavailable or extraction falls back to the frozen browser path.
 - Session persistence is local to the browser and is not shared across users or devices.

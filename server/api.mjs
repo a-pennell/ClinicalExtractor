@@ -7,6 +7,7 @@
  */
 
 import { ACK_REQUIRED_TYPES, buildGatedExport } from "./exportGates.mjs";
+import { createEngineHealth } from "./engineHealth.mjs";
 
 // AUDIT FIX (B3, preserved): `Access-Control-Allow-Origin: *` plus guessable
 // session ids let any third-party page a clinician visits read
@@ -24,7 +25,13 @@ const SYSTEM_LABEL_BY_URI = {
   "https://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets": "HCPCS"
 };
 
-export function createApiHandler({ engine, riskModelArtifact, sessions = new Map(), corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "" }) {
+export function createApiHandler({
+  engine,
+  riskModelArtifact,
+  sessions = new Map(),
+  corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "",
+  engineHealth = createEngineHealth()
+}) {
   return async function handleApiRequest(request, response, url) {
     if (corsAllowOrigin) {
       response.setHeader("Access-Control-Allow-Origin", corsAllowOrigin);
@@ -40,24 +47,30 @@ export function createApiHandler({ engine, riskModelArtifact, sessions = new Map
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
+      const health = engineHealth.snapshot();
       sendJson(response, 200, {
         ok: true,
         service: "clinical-entity-extraction-prototype",
         mode: "engine-backed",
         extraction: "clinical-nlp-engine",
+        engineStatus: health.status,
         timestamp: new Date().toISOString()
       });
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/engine/health") {
+      const health = await engineHealth.check(engine);
+      sendJson(response, health.status === "available" ? 200 : 503, {
+        ok: health.status === "available",
+        engine: health
+      });
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/providers") {
-      let engineStatus = "unavailable";
-      try {
-        await engine.ping();
-        engineStatus = "available";
-      } catch {
-        engineStatus = "unavailable";
-      }
+      const health = await engineHealth.check(engine);
+      const engineStatus = health.status === "available" ? "available" : "unavailable";
       sendJson(response, 200, {
         extractionProviders: [
           { id: "clinical-nlp-engine", label: "Python clinical_nlp engine (ADR-001)", status: engineStatus },

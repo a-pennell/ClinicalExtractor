@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ClinicalEntityExtractorPrototype } from "./ClinicalEntityExtractorPrototype";
 
@@ -16,7 +16,13 @@ describe("ClinicalEntityExtractorPrototype", () => {
     expect(screen.getByRole("heading", { name: "Output" })).toBeTruthy();
   });
 
-  it("clears extracted entities when the source text is deleted", () => {
+  it("makes the legacy fallback mode visible when the server engine is unavailable", async () => {
+    render(<ClinicalEntityExtractorPrototype />);
+
+    expect(await screen.findByText(/Server clinical_nlp engine unavailable; using legacy local fallback/i)).toBeTruthy();
+  });
+
+  it("clears extracted entities when the source text is deleted", async () => {
     render(<ClinicalEntityExtractorPrototype />);
 
     expect(screen.getAllByText("Hypertension").length).toBeGreaterThan(0);
@@ -25,7 +31,7 @@ describe("ClinicalEntityExtractorPrototype", () => {
       target: { value: "" }
     });
 
-    expect(screen.getByText("Ready to extract")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("Ready to extract")).toBeTruthy());
     expect(screen.getByText("No entity selected")).toBeTruthy();
     expect(screen.getByText("No source text yet.")).toBeTruthy();
     expect(screen.queryAllByText("Hypertension")).toHaveLength(0);

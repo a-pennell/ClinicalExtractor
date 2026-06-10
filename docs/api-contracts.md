@@ -1,16 +1,20 @@
 # API Contract Skeleton
 
-This prototype is browser-local today. These contracts define the backend shape and the deployed static server exposes a lightweight operational subset without requiring a database yet.
+This prototype uses the Python `clinical_nlp` engine behind the Node server for extraction. These contracts define the backend shape and the deployed server exposes a lightweight operational subset without requiring a database yet.
 
 ## Implemented Server Routes
 
 `GET /api/health`
 
-Returns deployment health, service name, timestamp, and the current extraction mode.
+Returns deployment health, service name, timestamp, current extraction mode, and cached engine status.
+
+`GET /api/engine/health`
+
+Returns PHI-safe readiness metadata for the Python `clinical_nlp` engine: status, schema version, Python version, package, mode, and latency fields. Returns 503 when the engine cannot be pinged.
 
 `GET /api/providers`
 
-Returns local, mock, disabled, and future provider manifests for extraction and terminology.
+Returns provider manifests for extraction and terminology. `clinical-nlp-engine` should be `available` in production; `local-rules` is a deprecated browser fallback.
 
 `POST /api/sessions`
 
@@ -18,7 +22,7 @@ Creates an in-memory prototype session with `id`, `specialty`, and `sourceText`.
 
 `POST /api/sessions/:id/extract`
 
-Returns the in-memory session with `status: "client-extraction-required"` and an empty `entities` array until a server-side extractor is configured. The client-side local rules remain the source of truth for this prototype.
+Runs the Python `clinical_nlp` engine and returns an extracted session with the raw `engine-1` envelope plus client-renderable entities. Returns 503 if the engine is unavailable.
 
 `GET /api/sessions/:id/export/:type`
 
@@ -28,11 +32,10 @@ Returns in-memory prototype session metadata. Persistent export generation is st
 
 Provider IDs:
 
+- `clinical-nlp-engine`
 - `local-rules`
-- `llm-extractor-placeholder`
-- `clinical-nlp-service-placeholder`
 
-All providers return the same document shape:
+Successful extraction responses return the same document shape:
 
 ```ts
 type ExtractionProviderResult = {
@@ -44,7 +47,7 @@ type ExtractionProviderResult = {
 };
 ```
 
-External providers should remain disabled unless configured. When disabled, they must return local-rule fallback output with a warning.
+`local-rules` remains available only as a documented browser fallback when the server engine is unavailable. Deployment smoke tests must fail if production reports `clinical-nlp-engine` as unavailable.
 
 ## Endpoints
 
@@ -74,13 +77,13 @@ Response:
 
 ### POST /api/sessions/:id/extract
 
-Runs the configured extraction provider.
+Runs the server-side Python extraction engine.
 
 Request:
 
 ```json
 {
-  "providerId": "local-rules",
+  "providerId": "clinical-nlp-engine",
   "contextMode": "auto",
   "specialtyOverride": null
 }
@@ -90,7 +93,8 @@ Response:
 
 ```json
 {
-  "providerId": "local-rules",
+  "providerId": "clinical-nlp-engine",
+  "schemaVersion": "engine-1",
   "context": {},
   "entities": [],
   "warnings": []
