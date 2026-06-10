@@ -6,6 +6,8 @@
  * entity shape so the TS layer renders without performing clinical inference.
  */
 
+import { ACK_REQUIRED_TYPES, buildGatedExport } from "./exportGates.mjs";
+
 // AUDIT FIX (B3, preserved): `Access-Control-Allow-Origin: *` plus guessable
 // session ids let any third-party page a clinician visits read
 // /api/sessions/:id/export, which returns sourceText (raw note / PHI).
@@ -155,6 +157,34 @@ export function createApiHandler({ engine, riskModelArtifact, sessions = new Map
       return;
     }
 
+    // Record a reviewer acknowledgment for ack-required entity types
+    // (operating-point policy 6.3): reviewer id + timestamp in session state.
+    const ackMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/acknowledge$/);
+    if (request.method === "POST" && ackMatch) {
+      const id = decodeURIComponent(ackMatch[1]);
+      const session = sessions.get(id);
+      if (!session) {
+        sendJson(response, 404, { error: "Session not found." });
+        return;
+      }
+      const body = await readJsonBody(request, response);
+      if (!body) return;
+      const reviewerId = typeof body.reviewerId === "string" ? body.reviewerId.trim() : "";
+      const types = Array.isArray(body.types) ? body.types.filter((type) => ACK_REQUIRED_TYPES.has(type)) : [];
+      if (!reviewerId || types.length === 0) {
+        sendJson(response, 400, { error: "Acknowledgment requires reviewerId and at least one ack-required type." });
+        return;
+      }
+      session.acknowledgments = session.acknowledgments ?? {};
+      const at = new Date().toISOString();
+      for (const type of types) session.acknowledgments[type] = { reviewerId, at };
+      sessions.set(id, session);
+      sendJson(response, 200, { id, acknowledgments: session.acknowledgments });
+      return;
+    }
+
+    // Gated export (operating-point policy section 6). Enforced server-side on
+    // every export path; blocked entities are never serialized.
     const exportMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/export\/([^/]+)$/);
     if (request.method === "GET" && exportMatch) {
       const id = decodeURIComponent(exportMatch[1]);
@@ -164,12 +194,8 @@ export function createApiHandler({ engine, riskModelArtifact, sessions = new Map
         sendJson(response, 404, { error: "Session not found." });
         return;
       }
-      sendJson(response, 200, {
-        id,
-        type,
-        session,
-        warning: "Export endpoint returns in-memory prototype session metadata only until backend persistence is added."
-      });
+      const result = buildGatedExport(session, type);
+      sendJson(response, result.status, result.payload);
       return;
     }
 
