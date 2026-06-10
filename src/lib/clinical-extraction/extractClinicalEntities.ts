@@ -55,10 +55,16 @@ export function extractClinicalEntityDocument(rawText: string, options: Extracti
 }
 
 function attachDisambiguation(entity: ClinicalEntity, resolutions: AbbreviationResolution[]): ClinicalEntity {
-  const resolution = resolutions.find(
-    (candidate) =>
-      candidate.canonicalName === entity.canonicalName ||
-      entity.mentions.some((mention) => mention.text.toLowerCase() === candidate.abbreviation.toLowerCase())
+  // Nitpick: the abbreviation-text fallback previously attached a resolution to
+  // ANY entity sharing the shorthand, even one whose canonicalName differs —
+  // mis-attaching disambiguation when two entities share an abbreviation. A
+  // resolution that resolved to a specific canonicalName now only attaches to
+  // the matching entity; the abbreviation fallback applies only to unresolved
+  // (still-ambiguous) resolutions.
+  const resolution = resolutions.find((candidate) =>
+    candidate.canonicalName
+      ? candidate.canonicalName === entity.canonicalName
+      : entity.mentions.some((mention) => mention.text.toLowerCase() === candidate.abbreviation.toLowerCase())
   );
   if (!resolution) return entity;
 
@@ -221,8 +227,11 @@ function resolveTemporality(section?: Segment["section"]): NonNullable<ClinicalE
 
 function makeTermRegex(term: string) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Nitpick: the start boundary was identical in both branches (dead code).
+  // Only the end boundary differs — symbol terms may abut a hyphen, word terms
+  // must not (so "ROM" does not match inside "ROM-based").
   const isSymbolTerm = /[^A-Za-z0-9\s]/.test(term);
-  const boundary = isSymbolTerm ? "(?<![A-Za-z0-9])" : "(?<![A-Za-z0-9])";
+  const boundary = "(?<![A-Za-z0-9])";
   const endBoundary = isSymbolTerm ? "(?![A-Za-z0-9])" : "(?![-A-Za-z0-9])";
   return new RegExp(`${boundary}${escaped}${endBoundary}`, "gi");
 }

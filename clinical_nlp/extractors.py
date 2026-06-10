@@ -80,15 +80,18 @@ class NLPExtractor(BaseExtractor):
                 attributes = dict(concept.attributes)
                 attributes.update(extract_match_attributes(match))
                 mentions.append(
-                    ClinicalMention(
-                        text=mention_text,
-                        entity_type=concept.entity_type,
-                        start_char=match.start(),
-                        end_char=match.end(),
-                        section_context=concept.section_context,
-                        confidence_score=concept.confidence_score,
-                        normalized_text=concept.normalized_text,
-                        attributes=attributes,
+                    guard_ambiguous_si(
+                        ClinicalMention(
+                            text=mention_text,
+                            entity_type=concept.entity_type,
+                            start_char=match.start(),
+                            end_char=match.end(),
+                            section_context=concept.section_context,
+                            confidence_score=concept.confidence_score,
+                            normalized_text=concept.normalized_text,
+                            attributes=attributes,
+                        ),
+                        text,
                     )
                 )
         return self.assertion_resolver.annotate_mentions(text, dedupe_mentions(mentions))
@@ -272,6 +275,35 @@ def default_regex_concepts() -> list[RegexConcept]:
     ]
 
 
+#: Cues that confirm a psych/risk reading of the bare abbreviation "SI"
+#: (which also means sacroiliac, stroke index, etc.).
+_PSYCH_CONTEXT_REGEX = re.compile(
+    r"\b(?:suicid\w*|ideation|self[-\s]?harm|homicid\w*|hopeless\w*|depress\w*|mood|"
+    r"phq|gad|c-?ssrs|safety plan|anxiet\w*|panic|mdd|ptsd|psych\w*|\bhi\b|overdose)\b",
+    re.IGNORECASE,
+)
+
+
+def guard_ambiguous_si(mention: ClinicalMention, text: str) -> ClinicalMention:
+    r"""Downgrade a bare "SI" risk mention lacking psychiatric context.
+
+    Nitpick: ``\bSI\b`` fires on sacroiliac/stroke-index/etc. Given the label
+    is suicide risk, we never suppress — we keep the mention but, when the note
+    has no psych/risk context, lower its confidence and flag it so it routes to
+    review rather than being asserted at face value.
+    """
+    if mention.normalized_text != "suicidal ideation" or mention.text.strip().upper() != "SI":
+        return mention
+    if _PSYCH_CONTEXT_REGEX.search(text):
+        return mention
+    return mention.model_copy(
+        update={
+            "confidence_score": min(mention.confidence_score, 0.4),
+            "attributes": {**dict(mention.attributes), "review_reason": "ambiguous-SI-no-psych-context"},
+        }
+    )
+
+
 def extract_match_attributes(match: re.Match[str]) -> dict[str, str | int | float | bool | None]:
     """Extract named regex groups into scalar attributes."""
     attributes: dict[str, str | int | float | bool | None] = {}
@@ -296,15 +328,29 @@ def dedupe_mentions(mentions: Sequence[ClinicalMention]) -> list[ClinicalMention
 
 
 def merge_mentions(primary: Sequence[ClinicalMention], secondary: Sequence[ClinicalMention]) -> list[ClinicalMention]:
-    """Merge deterministic and LLM mentions, preferring deterministic overlaps."""
+    """Merge deterministic and LLM mentions, preferring deterministic overlaps.
+
+    Nitpick fix: exact ``(type, start, end)`` keying let an LLM span one
+    character off from a deterministic span through as a near-duplicate. A
+    secondary mention is now dropped if it overlaps a same-type primary mention
+    with the same canonical text.
+    """
     merged = list(primary)
-    existing_keys = {(mention.entity_type, mention.start_char, mention.end_char) for mention in primary}
     for mention in secondary:
-        key = (mention.entity_type, mention.start_char, mention.end_char)
-        if key not in existing_keys:
-            merged.append(mention)
-            existing_keys.add(key)
+        if any(
+            existing.entity_type == mention.entity_type
+            and existing.canonical_text == mention.canonical_text
+            and _spans_overlap(existing.span, mention.span)
+            for existing in merged
+        ):
+            continue
+        merged.append(mention)
     return sorted(merged, key=lambda item: (item.start_char, item.end_char, item.entity_type.value))
+
+
+def _spans_overlap(left: tuple[int, int], right: tuple[int, int]) -> bool:
+    """Return whether two half-open character spans overlap."""
+    return max(left[0], right[0]) < min(left[1], right[1])
 
 
 def remap_mentions_to_source(
