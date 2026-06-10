@@ -47,6 +47,7 @@ class AssertionStatus(StrEnum):
     PRESENT = "present"
     ABSENT = "absent"
     POSSIBLE = "possible"
+    CONDITIONAL = "conditional"
     HYPOTHETICAL = "hypothetical"
     HISTORICAL = "historical"
     FAMILY_HISTORY = "family-history"

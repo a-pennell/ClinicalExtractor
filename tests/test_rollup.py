@@ -47,12 +47,28 @@ def test_agreeing_mentions_share_their_assertion() -> None:
     assert entities[0].review_priority == ReviewPriority.ROUTINE
 
 
-def test_mixed_temporal_assertions_are_conflicting_until_phase_2() -> None:
-    """Mixed HISTORICAL/PRESENT is CONFLICTING until guideline A3 rule 4 lands (Phase 2)."""
+def test_chronic_condition_mixed_temporal_rolls_up_to_present() -> None:
+    """Guideline A3 rule 4 (Phase 2): chronic HISTORICAL/PRESENT mix is PRESENT, not a conflict.
+
+    (Phase 1 behavior — all mixed temporal CONFLICTING — was superseded by the
+    planned C2 work; the non-chronic case below still conflicts.)
+    """
 
     text = "HTN noted. HTN again."
     historical = mention_at(text, "HTN", 1, EntityType.PROBLEM).with_assertion(AssertionStatus.HISTORICAL)
     present = mention_at(text, "HTN", 2, EntityType.PROBLEM).with_assertion(AssertionStatus.PRESENT)
+
+    entities = rollup_mentions([historical, present])
+
+    assert len(entities) == 1
+    assert entities[0].assertion == AssertionStatus.PRESENT
+    assert entities[0].review_priority == ReviewPriority.ROUTINE
+
+
+def test_non_chronic_mixed_temporal_assertions_are_conflicting() -> None:
+    text = "Pneumonia noted. Pneumonia again."
+    historical = mention_at(text, "Pneumonia", 1, EntityType.PROBLEM).with_assertion(AssertionStatus.HISTORICAL)
+    present = mention_at(text, "Pneumonia", 2, EntityType.PROBLEM).with_assertion(AssertionStatus.PRESENT)
 
     entities = rollup_mentions([historical, present])
 

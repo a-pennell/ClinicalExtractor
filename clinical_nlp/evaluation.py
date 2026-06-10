@@ -20,16 +20,20 @@ class OverlapStrategy(StrEnum):
 
 
 class MetricSummary(BaseModel):
-    """Precision, recall, and F1 counts."""
+    """Precision, recall, and F1 counts.
+
+    Metrics are ``None`` ("n/a") when their denominator is empty — a type
+    with zero predictions must not report precision 1.000 (audit C3).
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     true_positive: int = Field(ge=0)
     false_positive: int = Field(ge=0)
     false_negative: int = Field(ge=0)
-    precision: float = Field(ge=0.0, le=1.0)
-    recall: float = Field(ge=0.0, le=1.0)
-    f1: float = Field(ge=0.0, le=1.0)
+    precision: float | None = Field(default=None)
+    recall: float | None = Field(default=None)
+    f1: float | None = Field(default=None)
 
 
 class MentionMatch(BaseModel):
@@ -52,7 +56,7 @@ class AttributeAccuracy(BaseModel):
     attribute_name: str
     correct: int = Field(ge=0)
     total: int = Field(ge=0)
-    accuracy: float = Field(ge=0.0, le=1.0)
+    accuracy: float | None = Field(default=None)
     mismatches: list[str] = Field(default_factory=list)
 
 
@@ -315,17 +319,23 @@ def get_attribute_value(mention: ClinicalMention, attribute_name: str) -> object
     return mention.attributes.get(attribute_name)
 
 
-def safe_ratio(numerator: int, denominator: int) -> float:
-    """Return a ratio, treating an empty denominator as perfect by convention."""
+def safe_ratio(numerator: int, denominator: int) -> float | None:
+    """Return a ratio, or ``None`` ("n/a") for an empty denominator.
+
+    Audit C3: the previous treat-as-perfect convention reported precision
+    1.000 for entity types with zero predictions, masking absent coverage.
+    """
 
     if denominator == 0:
-        return 1.0
+        return None
     return numerator / denominator
 
 
-def harmonic_mean(precision: float, recall: float) -> float:
-    """Calculate F1 as harmonic mean of precision and recall."""
+def harmonic_mean(precision: float | None, recall: float | None) -> float | None:
+    """Calculate F1 as harmonic mean; ``None`` when either input is n/a."""
 
+    if precision is None or recall is None:
+        return None
     if precision + recall == 0:
         return 0.0
     return 2 * precision * recall / (precision + recall)

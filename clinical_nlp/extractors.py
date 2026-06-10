@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from clinical_nlp.llm_bridge import LLMExtractionClient, LLMExtractionError, extract_mentions_with_retries
-from clinical_nlp.negation import NegationScopeResolver
+from clinical_nlp.negation import NegationScopeResolver, compile_phrase_regex
 from clinical_nlp.schemas import ClinicalMention, EntityType, SectionContext
 
 
@@ -196,6 +196,9 @@ class TriagePolicy:
         "unclear",
         "differential",
     )
+    # C2 fix: boundary-aware matching — raw substring matching flagged
+    # "smothered" (contains "mother") as an ambiguity signal.
+    ambiguous_terms_regex = compile_phrase_regex(ambiguous_terms)
 
     def __init__(self, *, max_chars: int = 2_400, min_confidence_for_skip: float = 0.75) -> None:
         """Initialize triage thresholds."""
@@ -207,8 +210,7 @@ class TriagePolicy:
         """Decide whether the LLM should process a compressed note context."""
 
         reasons: list[str] = []
-        normalized = text.casefold()
-        if any(term in normalized for term in self.ambiguous_terms):
+        if self.ambiguous_terms_regex.search(text):
             reasons.append("ambiguous_or_reasoning_context")
         if nlp_mentions and min(mention.confidence_score for mention in nlp_mentions) < self.min_confidence_for_skip:
             reasons.append("low_confidence_nlp")
@@ -377,7 +379,7 @@ def compress_note_for_llm(text: str, mentions: Sequence[ClinicalMention], *, max
         if any(sentence.start_char <= offset < sentence.end_char for offset in mention_offsets):
             selected.append(sentence_text)
             continue
-        if any(term in sentence_text.casefold() for term in TriagePolicy.ambiguous_terms):
+        if TriagePolicy.ambiguous_terms_regex.search(sentence_text):
             selected.append(sentence_text)
 
     compressed = "\n".join(dict.fromkeys(selected)) or text.strip()

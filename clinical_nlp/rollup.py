@@ -7,9 +7,9 @@ only when all mentions agree. Any disagreement yields ``CONFLICTING`` and
 pain" followed by "reports chest pain") must surface as conflicts demanding
 human resolution, never resolve silently in either direction.
 
-Phase 2 (audit C2) adds the single sanctioned exception, annotation guideline
-A3 rule 4: a chronic condition with mixed HISTORICAL/PRESENT mentions rolls up
-to PRESENT. Until then, mixed temporal assertions are also CONFLICTING.
+The single sanctioned exception (annotation guideline A3 rule 4, audit C2):
+a chronic condition with mixed HISTORICAL/PRESENT mentions rolls up to PRESENT
+("history of hypertension, on lisinopril" means longstanding, not resolved).
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from clinical_nlp.lexicons import is_chronic_condition
 from clinical_nlp.schemas import AssertionStatus, ClinicalMention, EntityType
 
 
@@ -92,14 +93,15 @@ def build_entity(entity_type: EntityType, canonical_text: str, mentions: list[Cl
 def resolve_entity_assertion(canonical_text: str, assertions: set[AssertionStatus]) -> AssertionStatus:
     """Compute the entity-level assertion from distinct mention assertions.
 
-    Any disagreement is CONFLICTING, including mixed temporal assertions.
-    Phase 2 (audit C2) adds guideline A3 rule 4 here: chronic conditions with
-    mixed HISTORICAL/PRESENT mentions roll up to PRESENT.
+    Any disagreement is CONFLICTING, except guideline A3 rule 4: a chronic
+    condition with mixed HISTORICAL/PRESENT mentions is PRESENT (longstanding
+    under management, not a contradiction).
     """
 
-    del canonical_text  # Used by the A3 rule 4 chronic-active exception in Phase 2.
     if len(assertions) == 1:
         return next(iter(assertions))
+    if assertions == {AssertionStatus.PRESENT, AssertionStatus.HISTORICAL} and is_chronic_condition(canonical_text):
+        return AssertionStatus.PRESENT
     return AssertionStatus.CONFLICTING
 
 

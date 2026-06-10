@@ -77,11 +77,19 @@ def run(gold_dir: Path, min_f1: float) -> int:
 
     report = evaluate_mentions(predicted, gold, attribute_names=("assertion",))
     print_report(report, note_count=len(notes))
+    print_assertion_breakdown(predicted, gold, report)
 
-    if report.partial.f1 < min_f1:
-        print(f"\nFAIL: partial-match F1 {report.partial.f1:.3f} < gate {min_f1:.3f}", file=sys.stderr)
+    overall_f1 = report.partial.f1 if report.partial.f1 is not None else 0.0
+    if overall_f1 < min_f1:
+        print(f"\nFAIL: partial-match F1 {overall_f1:.3f} < gate {min_f1:.3f}", file=sys.stderr)
         return 1
     return 0
+
+
+def fmt(value: float | None) -> str:
+    """Format a metric, rendering empty denominators as n/a (audit C3)."""
+
+    return f"{value:>8.3f}" if value is not None else f"{'n/a':>8}"
 
 
 def print_report(report: EvaluationReport, *, note_count: int) -> None:
@@ -91,20 +99,51 @@ def print_report(report: EvaluationReport, *, note_count: int) -> None:
     print(f"{'':24}{'P':>8}{'R':>8}{'F1':>8}{'TP':>6}{'FP':>6}{'FN':>6}")
     for label, summary in (("overall (exact)", report.exact), ("overall (partial)", report.partial)):
         print(
-            f"{label:<24}{summary.precision:>8.3f}{summary.recall:>8.3f}{summary.f1:>8.3f}"
+            f"{label:<24}{fmt(summary.precision)}{fmt(summary.recall)}{fmt(summary.f1)}"
             f"{summary.true_positive:>6}{summary.false_positive:>6}{summary.false_negative:>6}"
         )
     print("\nPer entity type (partial match):")
     for entity_type, summary in report.partial_by_type.items():
         print(
-            f"  {entity_type.value:<22}{summary.precision:>8.3f}{summary.recall:>8.3f}{summary.f1:>8.3f}"
+            f"  {entity_type.value:<22}{fmt(summary.precision)}{fmt(summary.recall)}{fmt(summary.f1)}"
             f"{summary.true_positive:>6}{summary.false_positive:>6}{summary.false_negative:>6}"
         )
+
+
+def print_assertion_breakdown(
+    predicted: list[ClinicalMention],
+    gold: list[ClinicalMention],
+    report: EvaluationReport,
+) -> None:
+    """Print assertion accuracy overall and per gold assertion class.
+
+    Includes the full assertion vocabulary (historical, family-history,
+    conditional, hypothetical, possible, conflicting, unknown) so the C2
+    classes are visible in every run, with n/a for unrepresented classes.
+    """
+
+    from clinical_nlp.schemas import AssertionStatus
+
     assertion = report.attribute_accuracy.get("assertion")
-    if assertion and assertion.total:
-        print(f"\nAssertion accuracy on matched mentions: {assertion.accuracy:.3f} ({assertion.correct}/{assertion.total})")
-        for mismatch in assertion.mismatches:
-            print(f"  mismatch: {mismatch}")
+    if not assertion:
+        return
+    overall = f"{assertion.accuracy:.3f}" if assertion.accuracy is not None else "n/a"
+    print(f"\nAssertion accuracy on matched mentions: {overall} ({assertion.correct}/{assertion.total})")
+
+    per_class: dict[AssertionStatus, list[int]] = {}
+    for match in report.partial_matches:
+        gold_assertion = gold[match.gold_index].assertion
+        bucket = per_class.setdefault(gold_assertion, [0, 0])
+        bucket[1] += 1
+        if predicted[match.predicted_index].assertion == gold_assertion:
+            bucket[0] += 1
+    print("Per gold assertion class (matched mentions):")
+    for status in AssertionStatus:
+        correct, total = per_class.get(status, [0, 0])
+        accuracy = f"{correct / total:.3f}" if total else "  n/a"
+        print(f"  {status.value:<16}{accuracy:>8}  ({correct}/{total})")
+    for mismatch in assertion.mismatches:
+        print(f"  mismatch: {mismatch}")
 
 
 def main() -> int:

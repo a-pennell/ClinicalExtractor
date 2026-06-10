@@ -16,7 +16,27 @@ from typing import Iterable, Sequence
 
 from pydantic import BaseModel, ConfigDict
 
+from clinical_nlp.lexicons import is_chronic_condition
 from clinical_nlp.schemas import AssertionStatus, ClinicalMention
+
+#: Recurring trigger circumstances for CONDITIONAL assertions (guideline A3
+#: rule 2: "pain with exertion", "dizziness when standing"). Lexicon-limited;
+#: expansion is gated on dev-split miss analysis.
+CONDITIONAL_CIRCUMSTANCE_REGEX = re.compile(
+    r"\b(?:with|when|upon|during|after|on)\s+"
+    r"(?:exertion|exercise|activity|ambulation|stairs|standing|walking|sitting|"
+    r"movement|lifting|bending|weight[- ]?bearing|palpation|prolonged\s+[a-z]+)\b",
+    re.IGNORECASE,
+)
+
+#: Active-management cues for the chronic-active exception (guideline A3 rule
+#: 4). The lookahead excludes temporal idioms ("on admission") that do not
+#: indicate management.
+ACTIVE_MANAGEMENT_REGEX = re.compile(
+    r"\b(?:on|taking|takes|managed with|controlled (?:on|with)|stable on|continues|continuing)\s+"
+    r"(?!(?:admission|arrival|exam|examination|presentation|review)\b)[A-Za-z]",
+    re.IGNORECASE,
+)
 
 
 class ScopeDecision(StrEnum):
@@ -24,9 +44,16 @@ class ScopeDecision(StrEnum):
 
     PRE_NEGATION = "pre-negation"
     POST_NEGATION = "post-negation"
+    FAMILY_HISTORY = "family-history"
+    CONDITIONAL = "conditional"
     HYPOTHETICAL = "hypothetical"
+    HISTORICAL = "historical"
+    POST_HISTORICAL = "post-historical"
+    CHRONIC_ACTIVE = "chronic-active-present"
+    POSSIBLE = "possible"
     TERMINATED = "terminated"
     DEFAULT_PRESENT = "default-present"
+    UNRESOLVED = "unresolved"
 
 
 class AssertionScopeResult(BaseModel):
@@ -69,6 +96,10 @@ class NegationScopeResolver:
         pre_negation_triggers: Sequence[str] | None = None,
         post_negation_triggers: Sequence[str] | None = None,
         hypothetical_triggers: Sequence[str] | None = None,
+        family_history_triggers: Sequence[str] | None = None,
+        historical_triggers: Sequence[str] | None = None,
+        post_historical_triggers: Sequence[str] | None = None,
+        possible_triggers: Sequence[str] | None = None,
         termination_cues: Sequence[str] | None = None,
         post_scope_chars: int = 40,
     ) -> None:
@@ -89,6 +120,13 @@ class NegationScopeResolver:
             )
         )
         self.post_negation_triggers = tuple(post_negation_triggers or ("is denied", "are denied", "denied"))
+        # REVIEW: annotation guideline A3 rule 5 classifies "rule out X" as
+        # POSSIBLE, but tests/test_negation.py::test_hypothetical_and_post_negation_are_scoped
+        # pins "Rule out pneumonia" as HYPOTHETICAL and per the ground rules we
+        # do not change existing tests. Keeping rule-out triggers HYPOTHETICAL
+        # until the author rules on the conflict; the operating-point policy
+        # treats both classes identically (never an active problem-list entry),
+        # so the routing consequence is nil either way.
         self.hypothetical_triggers = tuple(
             hypothetical_triggers
             or (
@@ -99,6 +137,64 @@ class NegationScopeResolver:
                 "concern for",
                 "if develops",
                 "watch for",
+                "if",
+                "in case of",
+                "educated on",
+                "education on",
+                "warning signs of",
+                "return precautions for",
+                "precautions for",
+                "instructed to report",
+            )
+        )
+        self.family_history_triggers = tuple(
+            family_history_triggers
+            or (
+                "family history of",
+                "family history",
+                "family hx",
+                "fhx",
+                "mother",
+                "father",
+                "brother",
+                "sister",
+                "sibling",
+                "maternal",
+                "paternal",
+                "grandmother",
+                "grandfather",
+                "aunt",
+                "uncle",
+                "son",
+                "daughter",
+            )
+        )
+        self.historical_triggers = tuple(
+            historical_triggers
+            or (
+                "history of",
+                "hx of",
+                "h/o",
+                "status post",
+                "s/p",
+                "prior",
+                "previous",
+                "past episode of",
+            )
+        )
+        self.post_historical_triggers = tuple(post_historical_triggers or ("resolved", "has resolved", "had resolved"))
+        self.possible_triggers = tuple(
+            possible_triggers
+            or (
+                "possible",
+                "probable",
+                "likely",
+                "presumed",
+                "suspected",
+                "suspect",
+                "cannot exclude",
+                "cannot rule out",
+                "questionable",
             )
         )
         self.termination_cues = tuple(
@@ -118,7 +214,19 @@ class NegationScopeResolver:
         self._pre_negation_regex = compile_phrase_regex(self.pre_negation_triggers)
         self._post_negation_regex = compile_phrase_regex(self.post_negation_triggers)
         self._hypothetical_regex = compile_phrase_regex(self.hypothetical_triggers)
+        self._family_history_regex = compile_phrase_regex(self.family_history_triggers)
+        self._historical_regex = compile_phrase_regex(self.historical_triggers)
+        self._post_historical_regex = compile_phrase_regex(self.post_historical_triggers)
+        self._possible_regex = compile_phrase_regex(self.possible_triggers)
         self._termination_regex = compile_phrase_regex(self.termination_cues)
+        # Backward-scoping cues that, when found after the mention beyond the
+        # post-scope window, make the assertion unresolvable (-> UNKNOWN)
+        # rather than silently PRESENT. Forward-scoping cues ("no", "denies")
+        # after a mention bind to *later* concepts and are deliberately
+        # excluded; flagging them would mark every list construction UNKNOWN.
+        self._unbound_backward_regex = compile_phrase_regex(
+            tuple(dict.fromkeys(self.post_negation_triggers + self.post_historical_triggers))
+        )
 
     def annotate_mentions(self, text: str, mentions: Iterable[ClinicalMention]) -> list[ClinicalMention]:
         """Return mention copies with scoped assertion labels.
@@ -161,6 +269,28 @@ class NegationScopeResolver:
         relative_end = mention.end_char - sentence.start_char
         before = sentence.text[:relative_start]
         after = sentence.text[relative_end : relative_end + self.post_scope_chars]
+        after_sentence = sentence.text[relative_end:]
+
+        # Annotation guideline A3 decision order: family-history, conditional,
+        # hypothetical, historical (with the chronic-active exception),
+        # possible, negation, then default. First matching rule wins.
+
+        family = self._find_pre_trigger_unless_negated(before, self._family_history_regex)
+        if family is not None:
+            assertion, decision, trigger = family
+            return self._build_result(mention, assertion, decision, trigger, sentence)
+
+        pre_negation_trigger = find_active_trigger(before, self._pre_negation_regex, self._termination_regex)
+
+        conditional = None if pre_negation_trigger else find_conditional_circumstance(after_sentence, self._termination_regex)
+        if conditional:
+            return self._build_result(
+                mention,
+                AssertionStatus.CONDITIONAL,
+                ScopeDecision.CONDITIONAL,
+                conditional,
+                sentence,
+            )
 
         hypothetical = find_active_trigger(before, self._hypothetical_regex, self._termination_regex)
         if hypothetical:
@@ -172,13 +302,47 @@ class NegationScopeResolver:
                 sentence,
             )
 
-        pre_negation = find_active_trigger(before, self._pre_negation_regex, self._termination_regex)
-        if pre_negation:
+        historical = self._find_pre_trigger_unless_negated(before, self._historical_regex)
+        if historical is not None:
+            assertion, decision, trigger = historical
+            if assertion == AssertionStatus.HISTORICAL and self._is_chronic_active(mention, after_sentence):
+                # Guideline A3 rule 4 boundary: "history of <chronic condition>,
+                # on <management>" means longstanding and active, not resolved.
+                return self._build_result(
+                    mention,
+                    AssertionStatus.PRESENT,
+                    ScopeDecision.CHRONIC_ACTIVE,
+                    trigger,
+                    sentence,
+                )
+            return self._build_result(mention, assertion, decision, trigger, sentence)
+
+        post_historical = find_post_negation(after, self._post_historical_regex, self._termination_regex)
+        if post_historical:
+            return self._build_result(
+                mention,
+                AssertionStatus.HISTORICAL,
+                ScopeDecision.POST_HISTORICAL,
+                post_historical,
+                sentence,
+            )
+
+        possible = find_active_trigger(before, self._possible_regex, self._termination_regex)
+        if possible:
+            return self._build_result(
+                mention,
+                AssertionStatus.POSSIBLE,
+                ScopeDecision.POSSIBLE,
+                possible,
+                sentence,
+            )
+
+        if pre_negation_trigger:
             return self._build_result(
                 mention,
                 AssertionStatus.ABSENT,
                 ScopeDecision.PRE_NEGATION,
-                pre_negation,
+                pre_negation_trigger,
                 sentence,
             )
 
@@ -192,13 +356,67 @@ class NegationScopeResolver:
                 sentence,
             )
 
+        # Default-PRESENT is abolished for unresolvable cases (audit C2,
+        # operating-point policy section 3): a backward-scoping cue beyond the
+        # post-scope window, or a mention that arrived UNKNOWN with no rule
+        # evidence, yields UNKNOWN (high review priority via rollup) instead
+        # of silently asserting presence.
+        unbound = find_unbound_backward_cue(
+            after_sentence,
+            self._unbound_backward_regex,
+            self._termination_regex,
+            window_chars=self.post_scope_chars,
+        )
+        if unbound:
+            return self._build_result(mention, AssertionStatus.UNKNOWN, ScopeDecision.UNRESOLVED, unbound, sentence)
+        if mention.assertion == AssertionStatus.UNKNOWN:
+            return self._build_result(mention, AssertionStatus.UNKNOWN, ScopeDecision.UNRESOLVED, None, sentence)
+
         return self._build_result(
             mention,
-            mention.assertion if mention.assertion != AssertionStatus.UNKNOWN else AssertionStatus.PRESENT,
+            mention.assertion,
             ScopeDecision.DEFAULT_PRESENT,
             None,
             sentence,
         )
+
+    def _find_pre_trigger_unless_negated(
+        self,
+        before: str,
+        trigger_regex: re.Pattern[str],
+    ) -> tuple[AssertionStatus, ScopeDecision, str] | None:
+        """Find a pre-mention family/historical trigger, honoring negation precedence.
+
+        "No history of MI" and "denies family history of cancer" are ABSENT,
+        not HISTORICAL/FAMILY_HISTORY: a negation trigger immediately scoping
+        the family/historical cue wins.
+        """
+
+        scoped = trim_to_last_termination(before, self._termination_regex)
+        matches = list(trigger_regex.finditer(scoped))
+        if not matches:
+            return None
+        match = matches[-1]
+        if self._pre_negation_regex.search(scoped[: match.start()]):
+            return (AssertionStatus.ABSENT, ScopeDecision.PRE_NEGATION, scoped[: match.end()].strip()[-60:])
+        assertion = (
+            AssertionStatus.FAMILY_HISTORY
+            if trigger_regex is self._family_history_regex
+            else AssertionStatus.HISTORICAL
+        )
+        decision = (
+            ScopeDecision.FAMILY_HISTORY
+            if trigger_regex is self._family_history_regex
+            else ScopeDecision.HISTORICAL
+        )
+        return (assertion, decision, match.group(0).strip())
+
+    def _is_chronic_active(self, mention: ClinicalMention, after_sentence: str) -> bool:
+        """Return whether the chronic-active exception (A3 rule 4) applies."""
+
+        if not is_chronic_condition(mention.canonical_text):
+            return False
+        return bool(ACTIVE_MANAGEMENT_REGEX.search(after_sentence))
 
     def _build_result(
         self,
@@ -303,6 +521,37 @@ def find_post_negation(
     search_text = text_after_mention[: termination_match.start()] if termination_match else text_after_mention
     match = trigger_regex.search(search_text)
     return match.group(0).strip() if match else None
+
+
+def find_conditional_circumstance(text_after_mention: str, termination_regex: re.Pattern[str]) -> str | None:
+    """Find a recurring trigger circumstance after the mention (A3 rule 2)."""
+
+    termination_match = termination_regex.search(text_after_mention)
+    search_text = text_after_mention[: termination_match.start()] if termination_match else text_after_mention
+    match = CONDITIONAL_CIRCUMSTANCE_REGEX.search(search_text)
+    return match.group(0).strip() if match else None
+
+
+def find_unbound_backward_cue(
+    text_after_mention: str,
+    backward_regex: re.Pattern[str],
+    termination_regex: re.Pattern[str],
+    *,
+    window_chars: int,
+) -> str | None:
+    """Find a backward-scoping cue beyond the post-scope window.
+
+    Such a cue ("...later categorically denied") plausibly bears on the
+    mention but is too far away for the windowed post rules to bind safely;
+    the mention is unresolvable rather than silently present (audit C2).
+    """
+
+    termination_match = termination_regex.search(text_after_mention)
+    search_text = text_after_mention[: termination_match.start()] if termination_match else text_after_mention
+    match = backward_regex.search(search_text)
+    if match and match.start() >= window_chars:
+        return match.group(0).strip()
+    return None
 
 
 def trim_to_last_termination(text: str, termination_regex: re.Pattern[str]) -> str:
