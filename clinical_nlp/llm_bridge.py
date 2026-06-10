@@ -161,7 +161,10 @@ def validate_mention_plausibility(mentions: Sequence[ClinicalMention]) -> None:
         try:
             validate_single_mention_plausibility(mention)
         except ValueError as exc:
-            errors.append(f"mention[{index}] {mention.text!r}: {exc}")
+            # AUDIT FIX (PHI): the raised message propagates into exception chains
+            # and application logs; identify mentions by index/type/span instead of
+            # quoting raw clinical text.
+            errors.append(f"mention[{index}] type={mention.entity_type.value} span={mention.span}: {exc}")
     if errors:
         raise ValueError("; ".join(errors))
 

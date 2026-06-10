@@ -76,10 +76,20 @@ function resolveStaticFile(staticPath) {
   return join(root, "index.html");
 }
 
+// AUDIT FIX (PHI): `Access-Control-Allow-Origin: *` plus guessable session ids
+// (`session-${Date.now()}`) let any third-party page a clinician visits read
+// /api/sessions/:id/export, which returns sourceText (raw note / PHI).
+// Cross-origin access is now opt-in via CORS_ALLOW_ORIGIN.
+// TODO(audit): add authn and unguessable session ids before any real notes
+// touch these endpoints; the in-memory `sessions` Map is also unbounded.
+const corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "";
+
 async function handleApiRequest(request, response, url) {
-  response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "content-type");
+  if (corsAllowOrigin) {
+    response.setHeader("Access-Control-Allow-Origin", corsAllowOrigin);
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "content-type");
+  }
   response.setHeader("Cache-Control", "no-cache");
 
   if (request.method === "OPTIONS") {

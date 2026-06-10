@@ -147,8 +147,16 @@ class HybridExtractor(BaseExtractor):
         triage = self.triage_policy.triage(text, nlp_mentions)
         if not triage.requires_llm:
             return nlp_mentions
-        llm_mentions = self.llm_extractor.extract(triage.compressed_text)
-        return merge_mentions(nlp_mentions, llm_mentions)
+        try:
+            llm_mentions = self.llm_extractor.extract(triage.compressed_text)
+        except LLMExtractionError:
+            # AUDIT FIX: a provider failure previously discarded all deterministic
+            # results. Degrade to NLP-only output instead of failing the document.
+            # TODO(audit): surface the degradation to callers (e.g. an
+            # ExtractionResult envelope with `escalation_failed=True`) so review
+            # queues can prioritize these notes instead of silently passing them.
+            return nlp_mentions
+        return merge_mentions(nlp_mentions, remap_mentions_to_source(text, triage.compressed_text, llm_mentions))
 
     async def extract_async(self, text: str) -> list[ClinicalMention]:
         """Run deterministic extraction and asynchronously escalate complex text."""
@@ -157,8 +165,11 @@ class HybridExtractor(BaseExtractor):
         triage = self.triage_policy.triage(text, nlp_mentions)
         if not triage.requires_llm:
             return nlp_mentions
-        llm_mentions = await self.llm_extractor.extract_async(triage.compressed_text)
-        return merge_mentions(nlp_mentions, llm_mentions)
+        try:
+            llm_mentions = await self.llm_extractor.extract_async(triage.compressed_text)
+        except LLMExtractionError:
+            return nlp_mentions
+        return merge_mentions(nlp_mentions, remap_mentions_to_source(text, triage.compressed_text, llm_mentions))
 
 
 @dataclass(frozen=True, slots=True)
@@ -288,6 +299,64 @@ def merge_mentions(primary: Sequence[ClinicalMention], secondary: Sequence[Clini
             merged.append(mention)
             existing_keys.add(key)
     return sorted(merged, key=lambda item: (item.start_char, item.end_char, item.entity_type.value))
+
+
+def remap_mentions_to_source(
+    original_text: str,
+    compressed_text: str,
+    mentions: Sequence[ClinicalMention],
+) -> list[ClinicalMention]:
+    """Remap mention offsets from a compressed LLM excerpt back to the source note.
+
+    AUDIT FIX: ``HybridExtractor`` sends ``compress_note_for_llm`` output to the
+    LLM, so LLM mention offsets index the excerpt, not the original note. Merging
+    them unchanged silently corrupted every downstream span (highlighting,
+    evaluation, dedupe). Compressed excerpts are newline-joined verbatim sentence
+    substrings of the source, so each line can be located in the source and the
+    delta applied.
+
+    Mentions that cannot be located, or whose remapped span does not reproduce
+    the mention text exactly, are dropped rather than emitted with bad offsets.
+    TODO(audit): count drops and emit telemetry; duplicated sentences map to the
+    first occurrence, which copy-forwarded notes can make ambiguous.
+
+    Args:
+        original_text: Full source clinical note.
+        compressed_text: Excerpt produced by ``compress_note_for_llm``.
+        mentions: Mentions with offsets into ``compressed_text``.
+
+    Returns:
+        Mentions with offsets validated against ``original_text``.
+    """
+
+    line_maps: list[tuple[int, int, int]] = []
+    cursor = 0
+    search_from = 0
+    for line in compressed_text.split("\n"):
+        line_start = cursor
+        line_end = cursor + len(line)
+        found_at = original_text.find(line, search_from)
+        if found_at < 0:
+            found_at = original_text.find(line)
+        if found_at >= 0 and line:
+            line_maps.append((line_start, line_end, found_at))
+            search_from = found_at + len(line)
+        cursor = line_end + 1
+
+    remapped: list[ClinicalMention] = []
+    for mention in mentions:
+        target = next(
+            (entry for entry in line_maps if entry[0] <= mention.start_char and mention.end_char <= entry[1]),
+            None,
+        )
+        if target is None:
+            continue
+        delta = target[2] - target[0]
+        start, end = mention.start_char + delta, mention.end_char + delta
+        if original_text[start:end] != mention.text:
+            continue
+        remapped.append(mention.model_copy(update={"start_char": start, "end_char": end}))
+    return remapped
 
 
 def compress_note_for_llm(text: str, mentions: Sequence[ClinicalMention], *, max_chars: int) -> str:

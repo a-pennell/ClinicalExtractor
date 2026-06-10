@@ -4,3 +4,5 @@ dist/
 *.local
 *.tsbuildinfo
 node_modules/.tmp/
+__pycache__/
+.ruff_cache/
