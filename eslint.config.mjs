@@ -17,7 +17,7 @@ const FROZEN_INFERENCE_PATTERNS = [
 ];
 
 export default tseslint.config(
-  { ignores: ["dist/**", "node_modules/**"] },
+  { ignores: [".venv/**", "dist/**", "node_modules/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

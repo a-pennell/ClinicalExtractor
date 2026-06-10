@@ -26,10 +26,30 @@ const checks = [
       const body = await response.json();
       assert(response.ok, `Expected /api/providers to return 2xx, got ${response.status}`);
       assert(Array.isArray(body.extractionProviders), "Provider manifest is missing extractionProviders.");
+      const engineProvider = body.extractionProviders.find((provider) => provider.id === "clinical-nlp-engine");
+      assert(engineProvider, "Provider manifest does not include clinical-nlp-engine.");
       assert(
-        body.extractionProviders.some((provider) => provider.id === "local-rules"),
-        "Provider manifest does not include local-rules."
+        engineProvider.status === "available",
+        `clinical-nlp-engine must be available; got ${engineProvider.status || "missing status"}.`
       );
+      assert(body.extractionProviders.some((provider) => provider.id === "local-rules"), "Provider manifest does not include local-rules.");
+    }
+  },
+  {
+    label: "server extraction engine",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/sessions/test/extract`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ specialty: "mixed", sourceText: "BP 120/80. Denies SI." })
+      });
+      const body = await response.json();
+      assert(response.ok, `Expected engine extract to return 2xx, got ${response.status}`);
+      assert(body.providerId === "clinical-nlp-engine", "Extraction did not use clinical-nlp-engine.");
+      assert(body.status === "extracted", `Expected extracted session status, got ${body.status || "missing status"}.`);
+      assert(body.extraction?.schema_version === "engine-1", "Extraction response is missing the engine envelope.");
+      assert(Array.isArray(body.extraction.mentions), "Engine envelope is missing mentions.");
+      assert(Array.isArray(body.extraction.entities), "Engine envelope is missing entities.");
     }
   },
   {

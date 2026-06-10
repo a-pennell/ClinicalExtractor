@@ -1,0 +1,16 @@
+.git
+.github
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.venv
+dist
+node_modules
+htmlcov
+.coverage
+*.local
+*.log
+*.tsbuildinfo
+__pycache__
+*.py[cod]
+.DS_Store

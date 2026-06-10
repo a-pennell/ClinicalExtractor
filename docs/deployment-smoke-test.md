@@ -10,7 +10,7 @@ Run this against the deployed URL:
 npm run smoke:deployment -- https://your-railway-domain.up.railway.app
 ```
 
-It verifies the app shell, `/api/health`, `/api/providers`, and prototype session creation before the manual workflow below.
+It verifies the app shell, `/api/health`, `/api/providers`, the server-side Python extraction engine, and prototype session creation before the manual workflow below. The check fails if `/api/providers` reports `clinical-nlp-engine` as anything other than `available`.
 
 ## Public App
 

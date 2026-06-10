@@ -23,17 +23,17 @@ npm run build
 npm start
 ```
 
-`npm start` serves `dist/` through `server.mjs`, a small dependency-free Node static server that binds to `0.0.0.0` and respects Railway's `PORT` environment variable.
+`npm start` serves `dist/` through `server.mjs`, a small Node static/API server that binds to `0.0.0.0`, respects Railway's `PORT` environment variable, and spawns the Python `clinical_nlp` engine over stdio.
 
 ## Railway Deployment
 
 1. Create a Railway project from the GitHub repo.
 2. Use branch `main`.
-3. Build command: `npm run build`.
-4. Start command: `npm run start`.
+3. Let Railway build from the root `Dockerfile`; it provisions Node plus Python 3.11, installs `pydantic==2.13.4`, installs `clinical_nlp` importably, and runs `npm run build`.
+4. Start command remains `npm run start` via the Dockerfile `CMD`.
 5. Generate a public domain from the Railway service networking settings.
 
-No environment variables, database, or external NLP APIs are required for the current prototype.
+No database or external NLP APIs are required for the current prototype. The Docker image sets `ENGINE_PYTHON=/opt/venv/bin/python` so `server.mjs` can spawn `python -m clinical_nlp.service`.
 
 Post-deploy checklist: [docs/deployment-smoke-test.md](docs/deployment-smoke-test.md).
 
