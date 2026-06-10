@@ -79,11 +79,25 @@ export function createApiHandler({ engine, riskModelArtifact, sessions = new Map
         return;
       }
 
-      const features = sanitizeRiskFeatures(body.features, riskModelArtifact.featureNames);
+      // C9: never silently zero-fill. Reject requests missing required features
+      // (no __missing indicator to explain the gap); coerce only features whose
+      // __missing indicator is set, and echo what was coerced.
+      const resolved = resolveRiskFeatures(body.features, riskModelArtifact.featureNames);
+      if (resolved.missingRequired.length > 0) {
+        sendJson(response, 400, {
+          error: "missing-required-features",
+          missingFeatures: resolved.missingRequired,
+          hint: "Provide each feature, or set its __missing indicator to 1 to mark it legitimately absent."
+        });
+        return;
+      }
+
+      const features = resolved.features;
       const prediction = scoreRiskFeatures(features, riskModelArtifact);
       sendJson(response, 200, {
         prediction,
         features,
+        coercedFeatures: resolved.coerced,
         model: {
           id: riskModelArtifact.modelId,
           version: riskModelArtifact.version,
@@ -277,13 +291,54 @@ function titleCase(value) {
   return value.replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1));
 }
 
-function sanitizeRiskFeatures(input, featureNames) {
-  return Object.fromEntries(
-    featureNames.map((feature) => {
-      const value = Number(input[feature]);
-      return [feature, Number.isFinite(value) ? value : 0];
-    })
-  );
+/**
+ * C9: resolve the risk feature vector without silent zero-fill.
+ * - present + finite -> used as-is
+ * - a `*__missing` indicator absent -> defaults to 1 (treat as missing) and is
+ *   recorded as coerced
+ * - a value absent but its measurement's __missing indicator is set to 1 ->
+ *   coerced to a neutral 0 (scoring substitutes the model center) and recorded
+ * - a value absent with no missing-indicator signal -> required, reported
+ */
+export function resolveRiskFeatures(input, featureNames) {
+  const indicatorByMeasure = {};
+  for (const name of featureNames) {
+    if (name.endsWith("__missing")) indicatorByMeasure[name.slice(0, -"__missing".length)] = name;
+  }
+
+  const features = {};
+  const coerced = [];
+  const missingRequired = [];
+
+  const finiteOf = (name) => {
+    const value = Number(input[name]);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  for (const name of featureNames) {
+    const value = finiteOf(name);
+    if (value !== null) {
+      features[name] = value;
+      continue;
+    }
+    if (name.endsWith("__missing")) {
+      features[name] = 1;
+      coerced.push({ feature: name, to: 1, reason: "missing-indicator-defaulted" });
+      continue;
+    }
+    const measure = Object.keys(indicatorByMeasure)
+      .filter((prefix) => name === prefix || name.startsWith(`${prefix}_`))
+      .sort((a, b) => b.length - a.length)[0];
+    const indicator = measure ? indicatorByMeasure[measure] : undefined;
+    if (indicator && Number(input[indicator]) === 1) {
+      features[name] = 0;
+      coerced.push({ feature: name, to: 0, reason: `covered-by-${indicator}` });
+    } else {
+      missingRequired.push(name);
+    }
+  }
+
+  return { features, coerced, missingRequired };
 }
 
 function scoreRiskFeatures(features, artifact) {
