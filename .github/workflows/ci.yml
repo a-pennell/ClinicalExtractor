@@ -1,0 +1,48 @@
+name: CI
+
+# Audit C6: every PR runs the same checks as `./run_tests.sh` locally —
+# pinned ruff, pytest, vitest, and the gold-eval regression gate.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Exact-pinned toolchain (ruff included) from the lockfile.
+          pip install -r requirements-dev.lock
+          pip install -e . --no-deps
+      - name: Ruff (pinned 0.15.16)
+        run: ruff check clinical_nlp tests scripts
+      - name: Pytest
+        run: pytest tests -q
+      - name: Gold-eval regression gate
+        # Current dev partial-F1 = 0.414 (from scripts/run_eval.py output).
+        # Gate = current − 0.02. UPDATE THIS ONLY from the harness output,
+        # never by hand-tuning to pass.
+        run: python scripts/run_eval.py --min-f1 0.39
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install (locked)
+        run: npm ci
+      - name: ESLint (ADR-001 frozen-import enforcement)
+        run: npm run lint
+      - name: Typecheck
+        run: npx tsc -b
+      - name: Vitest
+        run: npm test

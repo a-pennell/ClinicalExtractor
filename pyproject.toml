@@ -13,11 +13,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Audit C6: ruff is pinned exactly so the toolchain does not drift (a current
+# ruff yielded 141+ findings on code the author linted clean). CI installs from
+# requirements-dev.lock; this version MUST match the CI workflow and the lock.
 dev = [
   "coverage[toml]>=7.6",
   "mypy>=1.11",
   "pytest>=8.3",
-  "ruff>=0.6",
+  "ruff==0.15.16",
 ]
 classic-ml = [
   "numpy>=2.0",
