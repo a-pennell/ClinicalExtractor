@@ -1,5 +1,16 @@
-import type { ClinicalEntity } from "./types";
+import type { AssertionStatus, ClinicalEntity } from "./types";
 
+/**
+ * @deprecated FROZEN — ADR-001 (docs/ADR-001-pipeline-consolidation.md).
+ * The Python `clinical_nlp` package is the single extraction engine; this
+ * module is legacy kept only until cutover completes. Do not add features
+ * and do not import from application code. The conflict-aware rollup that
+ * replaces it lives in `clinical_nlp/rollup.py`.
+ *
+ * Interim B6 safety patch only: the former any-absent → absent rule reported
+ * actively symptomatic complaints as denied; disagreement now yields
+ * "conflicting" and is surfaced for high-priority review.
+ */
 export function dedupeEntities(entities: ClinicalEntity[]) {
   const byKey = new Map<string, ClinicalEntity>();
 
@@ -19,7 +30,7 @@ export function dedupeEntities(entities: ClinicalEntity[]) {
     existing.attributes = {
       ...existing.attributes,
       ...entity.attributes,
-      assertion: existing.attributes?.assertion === "absent" || entity.attributes?.assertion === "absent" ? "absent" : entity.attributes?.assertion ?? existing.attributes?.assertion
+      assertion: mergeAssertions(existing.attributes?.assertion, entity.attributes?.assertion)
     };
     existing.confidence = confidenceRank(entity.confidence) > confidenceRank(existing.confidence) ? entity.confidence : existing.confidence;
     if (entity.explanation && !existing.explanation?.includes(entity.explanation)) {
@@ -28,6 +39,20 @@ export function dedupeEntities(entities: ClinicalEntity[]) {
   }
 
   return suppressNestedSymptomEntities(Array.from(byKey.values())).sort((a, b) => a.mentions[0].start - b.mentions[0].start);
+}
+
+/**
+ * B6 fix: contradicting mention assertions never resolve silently in either
+ * direction — any disagreement is "conflicting" (sticky: a conflict never
+ * un-conflicts by merging more mentions).
+ */
+function mergeAssertions(
+  current: AssertionStatus | undefined,
+  incoming: AssertionStatus | undefined
+): AssertionStatus | undefined {
+  if (current === "conflicting" || incoming === "conflicting") return "conflicting";
+  if (!current || !incoming || current === incoming) return incoming ?? current;
+  return "conflicting";
 }
 
 function mergeMentions(mentions: ClinicalEntity["mentions"]) {

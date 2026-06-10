@@ -52,6 +52,7 @@ class AssertionStatus(StrEnum):
     FAMILY_HISTORY = "family-history"
     PLANNED = "planned"
     ORDERED = "ordered"
+    CONFLICTING = "conflicting"
     UNKNOWN = "unknown"
 
 

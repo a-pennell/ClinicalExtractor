@@ -13,6 +13,10 @@ export function annotateEntityUncertainty(entities: ClinicalEntity[]): ClinicalE
 export function assessEntityUncertainty(entity: ClinicalEntity): EntityUncertainty {
   const reasons: string[] = [];
 
+  if (entity.attributes?.assertion === "conflicting") {
+    reasons.push("Mentions disagree on assertion (e.g. denied and reported in the same note); requires human resolution.");
+  }
+
   if (entity.confidence === "low") {
     reasons.push("Low extraction confidence.");
   }
@@ -44,6 +48,7 @@ export function assessEntityUncertainty(entity: ClinicalEntity): EntityUncertain
 }
 
 function rankReviewPriority(entity: ClinicalEntity, reasons: string[]): EntityUncertainty["reviewPriority"] {
+  if (entity.attributes?.assertion === "conflicting") return "high";
   if (!reasons.length) return "routine";
   if (entity.confidence === "low" || reasons.length >= 2) return "high";
   return "needs-review";

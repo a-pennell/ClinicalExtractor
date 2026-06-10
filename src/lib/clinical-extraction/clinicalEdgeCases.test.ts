@@ -54,13 +54,14 @@ describe("clinical edge cases: temporality and subject", () => {
 });
 
 describe("clinical edge cases: copy-forward and contradiction", () => {
-  it.fails("GAP: contradicting mentions must not collapse to a single 'absent' entity", () => {
-    // dedupeEntities makes 'absent' sticky across merged mentions, so the
-    // ACTIVE chest pain in the second sentence is reported as denied —
-    // the most clinically dangerous failure found in the audit.
+  it("B6 FIXED: contradicting mentions roll up to 'conflicting' with high review priority", () => {
+    // Previously dedupeEntities made 'absent' sticky across merged mentions,
+    // reporting the ACTIVE chest pain in the second sentence as denied.
     const text = "Denies chest pain.\nNow reports chest pain worse with exertion.";
     const chestPain = byName(text, "chest pain");
-    expect(chestPain?.attributes?.assertion).not.toBe("absent");
+    expect(chestPain?.attributes?.assertion).toBe("conflicting");
+    expect(chestPain?.uncertainty?.reviewPriority).toBe("high");
+    expect(chestPain?.mentions).toHaveLength(2);
   });
 });
 

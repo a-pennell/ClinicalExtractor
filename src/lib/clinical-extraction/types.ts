@@ -30,7 +30,10 @@ export type AssertionStatus =
   | "historical"
   | "family-history"
   | "planned"
-  | "ordered";
+  | "ordered"
+  // B6: entity-level status when merged mentions disagree; never resolves
+  // silently to absent or present. Always high review priority.
+  | "conflicting";
 
 export type Confidence = "high" | "medium" | "low";
 
