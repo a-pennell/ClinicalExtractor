@@ -72,11 +72,14 @@ describe("clinical edge cases: copy-forward and contradiction", () => {
 });
 
 describe("clinical edge cases: laterality", () => {
-  it.fails("GAP: the verb 'left' should not assign laterality", () => {
-    // detectLaterality regex-matches l/left/r/right against the first 24 chars
-    // of the sentence, so "Patient left the clinic" lateralizes the knee.
+  it("C8 FIXED: a bare verb 'left' does not assign laterality (no anatomical anchor)", () => {
     const kneePain = byName("Patient left the clinic with knee pain.", "knee pain");
     expect(kneePain?.attributes?.laterality).toBeUndefined();
+  });
+
+  it("C8: laterality is assigned when anchored to a body site", () => {
+    const kneePain = byName("Reports left knee pain after a fall.", "knee pain");
+    expect(kneePain?.attributes?.laterality).toBe("left");
   });
 });
 

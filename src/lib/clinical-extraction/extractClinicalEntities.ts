@@ -227,11 +227,19 @@ function makeTermRegex(term: string) {
   return new RegExp(`${boundary}${escaped}${endBoundary}`, "gi");
 }
 
+// C8: a laterality token assigns a side only when it is adjacent to an
+// anatomical anchor ("left knee", "R shoulder") — never a bare verb like
+// "left the clinic". Gold is annotated the same way (guideline A2.2). The
+// engine path does not infer laterality; this guard is for the frozen module.
+const BODY_SITE =
+  "(?:knee|shoulder|hip|ankle|wrist|elbow|hand|foot|arm|leg|back|flank|eye|ear|breast|chest|calf|thigh|" +
+  "forearm|finger|toe|patella|hamstring|quad|quadricep|rotator cuff|hamstrings|achilles|le|ue|lle|rle|lue|rue)";
+
 function detectLaterality(mention: string, sentence: string): NonNullable<ClinicalEntity["attributes"]>["laterality"] | undefined {
-  const context = `${mention} ${sentence.slice(0, 24)}`.toLowerCase();
-  if (/\b(bilateral|bilat)\b/.test(context)) return "bilateral";
-  if (/\b(r|right)\b/.test(context)) return "right";
-  if (/\b(l|left)\b/.test(context)) return "left";
+  const context = `${mention} ${sentence}`.toLowerCase();
+  if (new RegExp(`\\b(?:bilateral|bilat)\\s+${BODY_SITE}\\b`).test(context)) return "bilateral";
+  if (new RegExp(`\\b(?:right|r)\\s+${BODY_SITE}\\b`).test(context)) return "right";
+  if (new RegExp(`\\b(?:left|l)\\s+${BODY_SITE}\\b`).test(context)) return "left";
   return undefined;
 }
 
