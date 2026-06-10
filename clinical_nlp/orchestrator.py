@@ -24,7 +24,6 @@ class OrchestratorConfig(BaseModel):
     @classmethod
     def from_json_file(cls, path: str | Path) -> OrchestratorConfig:
         """Load orchestrator config from JSON."""
-
         with Path(path).open(encoding="utf-8") as config_file:
             return cls.model_validate(json.load(config_file))
 
@@ -44,18 +43,15 @@ class ClinicalExtractionOrchestrator:
         llm_client: LLMExtractionClient | None = None,
     ) -> None:
         """Initialize the orchestrator from config and optional dependencies."""
-
         self.config = config
         self.extractor = build_extractor(config, nlp_extractor=nlp_extractor, llm_client=llm_client)
 
     def extract(self, text: str) -> list[ClinicalMention]:
         """Extract clinical mentions using the configured strategy."""
-
         return self.extractor.extract(text)
 
     async def extract_async(self, text: str) -> list[ClinicalMention]:
         """Extract clinical mentions asynchronously when supported."""
-
         if isinstance(self.extractor, LLMExtractor | HybridExtractor):
             return await self.extractor.extract_async(text)
         return self.extractor.extract(text)
@@ -68,7 +64,6 @@ def build_extractor(
     llm_client: LLMExtractionClient | None = None,
 ) -> BaseExtractor:
     """Build an extractor strategy from configuration."""
-
     nlp = nlp_extractor or NLPExtractor()
     if config.mode == ExtractionMode.NLP:
         return nlp

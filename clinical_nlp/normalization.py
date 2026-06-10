@@ -68,7 +68,6 @@ class ConceptCoding(BaseModel):
     @property
     def is_release_pinned(self) -> bool:
         """Return whether the coding carries a pinned vocabulary release."""
-
         return bool(self.release_version)
 
 
@@ -87,7 +86,6 @@ class NormalizedMention(BaseModel):
         Audit B5: codings without a pinned vocabulary release stay
         ``is_coded: False`` until pinned; they remain visible as candidates.
         """
-
         return any(coding.is_release_pinned for coding in self.codings)
 
 
@@ -101,7 +99,6 @@ class TerminologyResolver(Protocol):
 @lru_cache(maxsize=1)
 def load_terminology_seed() -> Mapping[str, tuple[ConceptCoding, ...]]:
     """Load the migrated TS terminology map, keyed by casefolded canonical name."""
-
     with TERMINOLOGY_SEED_PATH.open(encoding="utf-8") as seed_file:
         rows = json.load(seed_file)
 
@@ -150,13 +147,11 @@ class StaticTerminologyResolver:
 
     def __init__(self, mapping: Mapping[tuple[str, EntityType], tuple[ConceptCoding, ...]] | None = None) -> None:
         """Initialize the resolver with an optional custom typed mapping."""
-
         self._mapping = dict(mapping or _STARTER_MAP)
         self._seed = load_terminology_seed()
 
     def resolve(self, normalized_text: str, entity_type: EntityType) -> list[ConceptCoding]:
         """Return candidate codings: typed starter match first, then seed by name."""
-
         typed = self._mapping.get((normalized_text, entity_type))
         if typed:
             return list(typed)
@@ -178,7 +173,6 @@ def normalize_mentions(
         candidate exists, which downstream consumers should treat as a review
         trigger rather than emitting an uncoded entity silently.
     """
-
     active_resolver = resolver or StaticTerminologyResolver()
     return [
         NormalizedMention(

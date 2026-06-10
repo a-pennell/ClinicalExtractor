@@ -9,8 +9,9 @@ spaCy ``Span`` objects, token-classification pipelines, or human annotation.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import StrEnum
-from typing import Mapping, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -117,7 +118,6 @@ class ClinicalMention(BaseModel):
     @classmethod
     def strip_optional_strings(cls, value: object) -> object:
         """Normalize incoming strings without changing null values."""
-
         if isinstance(value, str):
             return value.strip()
         return value
@@ -126,7 +126,6 @@ class ClinicalMention(BaseModel):
     @classmethod
     def validate_flat_attributes(cls, value: Mapping[str, ScalarAttribute]) -> Mapping[str, ScalarAttribute]:
         """Ensure attribute payloads stay flat and serializable."""
-
         for key in value:
             if not key or not key.strip():
                 msg = "Attribute keys must be non-empty strings."
@@ -136,7 +135,6 @@ class ClinicalMention(BaseModel):
     @model_validator(mode="after")
     def validate_offsets(self) -> ClinicalMention:
         """Validate mention character offsets."""
-
         if self.end_char <= self.start_char:
             msg = "end_char must be greater than start_char."
             raise ValueError(msg)
@@ -145,13 +143,11 @@ class ClinicalMention(BaseModel):
     @property
     def span(self) -> tuple[int, int]:
         """Return the half-open character span for this mention."""
-
         return (self.start_char, self.end_char)
 
     @property
     def canonical_text(self) -> str:
         """Return canonical text used for exact text comparisons."""
-
         return (self.normalized_text or self.resolved_abbreviation or self.text).casefold().strip()
 
     def with_assertion(self, assertion: AssertionStatus, *, reason: str | None = None) -> ClinicalMention:
@@ -164,7 +160,6 @@ class ClinicalMention(BaseModel):
         Returns:
             A new immutable ``ClinicalMention`` instance.
         """
-
         attributes = dict(self.attributes)
         if reason:
             attributes["assertion_reason"] = reason
@@ -201,7 +196,6 @@ def mention_from_spacy_span(
     Returns:
         A validated ``ClinicalMention``.
     """
-
     return ClinicalMention(
         text=span.text,
         entity_type=EntityType(span.label_),
@@ -234,7 +228,6 @@ def mentions_from_hf_token_classification(
     Raises:
         ValueError: If a prediction is missing required offsets or labels.
     """
-
     mentions: list[ClinicalMention] = []
     for prediction in predictions:
         try:

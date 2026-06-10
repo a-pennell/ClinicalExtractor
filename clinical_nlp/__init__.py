@@ -9,8 +9,8 @@ from clinical_nlp.schemas import AssertionStatus, ClinicalMention, EntityType
 __all__ = [
     "AssertionStatus",
     "BaseExtractor",
-    "ClinicalMention",
     "ClinicalExtractionOrchestrator",
+    "ClinicalMention",
     "EntityType",
     "HybridExtractor",
     "LLMExtractor",

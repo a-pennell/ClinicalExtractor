@@ -13,7 +13,6 @@ def clinical_mention(
     value: int | None = None,
 ) -> ClinicalMention:
     """Build a simple test mention."""
-
     attributes = {"value": value} if value is not None else {}
     return ClinicalMention(
         text=text,
@@ -28,7 +27,6 @@ def clinical_mention(
 
 def test_feature_engineering_respects_temporal_cutoff_and_negation() -> None:
     """Features should include prior data only and distinguish negated from missing."""
-
     engineer = MentionFeatureEngineer(
         [FeatureSpec(feature_name="pain_rating", entity_type=EntityType.SEVERITY, normalized_text="pain rating")]
     )

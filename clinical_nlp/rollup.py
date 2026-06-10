@@ -49,7 +49,6 @@ class RolledUpEntity(BaseModel):
     @property
     def mention_assertions(self) -> list[AssertionStatus]:
         """Return the per-mention assertions in source order."""
-
         return [mention.assertion for mention in self.mentions]
 
 
@@ -65,7 +64,6 @@ def rollup_mentions(mentions: Sequence[ClinicalMention]) -> list[RolledUpEntity]
         review priority, except the chronic-active case (guideline A3 rule 4)
         which rolls up to PRESENT.
     """
-
     groups: dict[tuple[EntityType, str], list[ClinicalMention]] = {}
     for mention in sorted(mentions, key=lambda item: (item.start_char, item.end_char)):
         groups.setdefault((mention.entity_type, mention.canonical_text), []).append(mention)
@@ -79,7 +77,6 @@ def rollup_mentions(mentions: Sequence[ClinicalMention]) -> list[RolledUpEntity]
 
 def build_entity(entity_type: EntityType, canonical_text: str, mentions: list[ClinicalMention]) -> RolledUpEntity:
     """Build one rolled-up entity from a mention group."""
-
     assertion = resolve_entity_assertion(canonical_text, {mention.assertion for mention in mentions})
     return RolledUpEntity(
         canonical_text=canonical_text,
@@ -97,7 +94,6 @@ def resolve_entity_assertion(canonical_text: str, assertions: set[AssertionStatu
     condition with mixed HISTORICAL/PRESENT mentions is PRESENT (longstanding
     under management, not a contradiction).
     """
-
     if len(assertions) == 1:
         return next(iter(assertions))
     if assertions == {AssertionStatus.PRESENT, AssertionStatus.HISTORICAL} and is_chronic_condition(canonical_text):
@@ -107,7 +103,6 @@ def resolve_entity_assertion(canonical_text: str, assertions: set[AssertionStatu
 
 def resolve_review_priority(assertion: AssertionStatus) -> ReviewPriority:
     """Map an entity-level assertion to a review priority tier."""
-
     if assertion in (AssertionStatus.CONFLICTING, AssertionStatus.UNKNOWN):
         return ReviewPriority.HIGH
     return ReviewPriority.ROUTINE

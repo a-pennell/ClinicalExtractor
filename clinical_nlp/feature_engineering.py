@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from clinical_nlp.schemas import AssertionStatus, ClinicalMention, EntityType
 
-
 FeatureValue = int | float | str | bool | None
 
 
@@ -36,7 +35,6 @@ class MentionRecord(BaseModel):
     @classmethod
     def require_timezone(cls, value: datetime) -> datetime:
         """Require timezone-aware timestamps to prevent split leakage."""
-
         if value.tzinfo is None or value.utcoffset() is None:
             msg = "observed_at must be timezone-aware."
             raise ValueError(msg)
@@ -56,7 +54,6 @@ class PredictionIndexRow(BaseModel):
     @classmethod
     def require_timezone(cls, value: datetime) -> datetime:
         """Require timezone-aware prediction timestamps."""
-
         if value.tzinfo is None or value.utcoffset() is None:
             msg = "prediction_time must be timezone-aware."
             raise ValueError(msg)
@@ -92,7 +89,6 @@ class FeatureMatrix(BaseModel):
 
     def to_pandas(self) -> object:
         """Convert rows to a pandas DataFrame if pandas is installed."""
-
         try:
             pandas = importlib.import_module("pandas")
         except ImportError as exc:
@@ -106,7 +102,6 @@ class MentionFeatureEngineer:
 
     def __init__(self, specs: Sequence[FeatureSpec]) -> None:
         """Initialize feature specs."""
-
         self.specs = tuple(specs)
 
     def build_matrix(
@@ -119,7 +114,6 @@ class MentionFeatureEngineer:
         Only mentions with ``observed_at < prediction_time`` are eligible. This
         strict cutoff prevents same-visit or future-note leakage by default.
         """
-
         records_by_patient: dict[str, list[MentionRecord]] = defaultdict(list)
         for record in records:
             records_by_patient[record.patient_id].append(record)
@@ -142,9 +136,12 @@ class MentionFeatureEngineer:
                 all_feature_names.update(feature_values)
             rows.append(row)
 
-        feature_names = ["patient_id", "visit_id", "prediction_time"] + sorted(
-            name for name in all_feature_names if name not in {"patient_id", "visit_id", "prediction_time"}
-        )
+        feature_names = [
+            "patient_id",
+            "visit_id",
+            "prediction_time",
+            *sorted(name for name in all_feature_names if name not in {"patient_id", "visit_id", "prediction_time"}),
+        ]
         return FeatureMatrix(rows=rows, feature_names=feature_names)
 
 
@@ -154,7 +151,6 @@ def filter_lookback_records(
     lookback_days: int,
 ) -> list[MentionRecord]:
     """Return records available before prediction time and inside lookback."""
-
     lookback_start = prediction_time - timedelta(days=lookback_days)
     return [
         record
@@ -165,7 +161,6 @@ def filter_lookback_records(
 
 def aggregate_spec(spec: FeatureSpec, records: Iterable[MentionRecord]) -> dict[str, FeatureValue]:
     """Aggregate one feature spec over a temporal mention window."""
-
     matching_mentions = [record.mention for record in records if mention_matches_spec(record.mention, spec)]
     prefix = spec.feature_name
     present_mentions = [mention for mention in matching_mentions if mention.assertion == AssertionStatus.PRESENT]
@@ -207,17 +202,13 @@ def aggregate_spec(spec: FeatureSpec, records: Iterable[MentionRecord]) -> dict[
 
 def mention_matches_spec(mention: ClinicalMention, spec: FeatureSpec) -> bool:
     """Return whether a mention should contribute to a feature spec."""
-
     if mention.entity_type != spec.entity_type:
         return False
-    if spec.normalized_text and mention.canonical_text != spec.normalized_text.casefold():
-        return False
-    return True
+    return not (spec.normalized_text and mention.canonical_text != spec.normalized_text.casefold())
 
 
 def coerce_float(value: object) -> float | None:
     """Safely coerce scalar mention attributes to float."""
-
     if value is None or isinstance(value, bool):
         return None
     try:
@@ -228,7 +219,6 @@ def coerce_float(value: object) -> float | None:
 
 def default_feature_specs() -> list[FeatureSpec]:
     """Starter feature specs for common clinical predictors."""
-
     return [
         FeatureSpec(feature_name="heart_rate", entity_type=EntityType.VITAL, normalized_text="heart rate"),
         FeatureSpec(feature_name="pain_rating", entity_type=EntityType.SEVERITY, normalized_text="pain rating"),
@@ -239,5 +229,4 @@ def default_feature_specs() -> list[FeatureSpec]:
 
 def utc_datetime(year: int, month: int, day: int) -> datetime:
     """Convenience helper for tests and examples."""
-
     return datetime(year, month, day, tzinfo=UTC)

@@ -68,13 +68,11 @@ class NLPExtractor(BaseExtractor):
         assertion_resolver: NegationScopeResolver | None = None,
     ) -> None:
         """Initialize deterministic extraction patterns."""
-
         self.concepts = tuple(concepts or default_regex_concepts())
         self.assertion_resolver = assertion_resolver or NegationScopeResolver()
 
     def extract(self, text: str) -> list[ClinicalMention]:
         """Extract deterministic mentions and apply sentence-local assertion scope."""
-
         mentions: list[ClinicalMention] = []
         for concept in self.concepts:
             for match in concept.pattern.finditer(text):
@@ -101,7 +99,6 @@ class LLMExtractor(BaseExtractor):
 
     def __init__(self, client: LLMExtractionClient, *, max_retries: int = 2) -> None:
         """Initialize an LLM-backed extractor."""
-
         self.client = client
         self.max_retries = max_retries
 
@@ -111,7 +108,6 @@ class LLMExtractor(BaseExtractor):
         Raises:
             LLMExtractionError: If called with an asynchronous-only client.
         """
-
         try:
             return self.client.extract_sync(text)
         except NotImplementedError as exc:
@@ -120,7 +116,6 @@ class LLMExtractor(BaseExtractor):
 
     async def extract_async(self, text: str) -> list[ClinicalMention]:
         """Extract mentions asynchronously with validation retries."""
-
         return await extract_mentions_with_retries(self.client, text, max_retries=self.max_retries)
 
 
@@ -132,20 +127,18 @@ class HybridExtractor(BaseExtractor):
         nlp_extractor: NLPExtractor,
         llm_extractor: LLMExtractor,
         *,
-        triage_policy: "TriagePolicy | None" = None,
+        triage_policy: TriagePolicy | None = None,
     ) -> None:
         """Initialize the hybrid extraction strategy."""
-
         self.nlp_extractor = nlp_extractor
         self.llm_extractor = llm_extractor
         self.triage_policy = triage_policy or TriagePolicy()
 
     def extract(self, text: str) -> list[ClinicalMention]:
         """Run deterministic extraction and synchronously escalate complex text."""
-
         return self.extract_outcome(text).mentions
 
-    def extract_outcome(self, text: str) -> "ExtractionOutcome":
+    def extract_outcome(self, text: str) -> ExtractionOutcome:
         """Extract with an outcome envelope surfacing escalation failures.
 
         Resolves the audit B2 TODO: provider failures degrade to NLP-only
@@ -153,7 +146,6 @@ class HybridExtractor(BaseExtractor):
         ``escalation_failed`` so review queues can prioritize degraded notes
         (operating-point policy section 5).
         """
-
         nlp_mentions = self.nlp_extractor.extract(text)
         triage = self.triage_policy.triage(text, nlp_mentions)
         if not triage.requires_llm:
@@ -170,7 +162,6 @@ class HybridExtractor(BaseExtractor):
 
     async def extract_async(self, text: str) -> list[ClinicalMention]:
         """Run deterministic extraction and asynchronously escalate complex text."""
-
         nlp_mentions = self.nlp_extractor.extract(text)
         triage = self.triage_policy.triage(text, nlp_mentions)
         if not triage.requires_llm:
@@ -221,13 +212,11 @@ class TriagePolicy:
 
     def __init__(self, *, max_chars: int = 2_400, min_confidence_for_skip: float = 0.75) -> None:
         """Initialize triage thresholds."""
-
         self.max_chars = max_chars
         self.min_confidence_for_skip = min_confidence_for_skip
 
     def triage(self, text: str, nlp_mentions: Sequence[ClinicalMention]) -> TriageDecision:
         """Decide whether the LLM should process a compressed note context."""
-
         reasons: list[str] = []
         if self.ambiguous_terms_regex.search(text):
             reasons.append("ambiguous_or_reasoning_context")
@@ -243,7 +232,6 @@ class TriagePolicy:
 
 def default_regex_concepts() -> list[RegexConcept]:
     """Return starter deterministic concepts for production bootstrapping."""
-
     return [
         RegexConcept(
             EntityType.VITAL,
@@ -286,7 +274,6 @@ def default_regex_concepts() -> list[RegexConcept]:
 
 def extract_match_attributes(match: re.Match[str]) -> dict[str, str | int | float | bool | None]:
     """Extract named regex groups into scalar attributes."""
-
     attributes: dict[str, str | int | float | bool | None] = {}
     for key, value in match.groupdict().items():
         if value is None:
@@ -297,7 +284,6 @@ def extract_match_attributes(match: re.Match[str]) -> dict[str, str | int | floa
 
 def dedupe_mentions(mentions: Sequence[ClinicalMention]) -> list[ClinicalMention]:
     """Dedupe exact same label/span pairs while preserving first occurrence."""
-
     seen: set[tuple[EntityType, int, int]] = set()
     deduped: list[ClinicalMention] = []
     for mention in sorted(mentions, key=lambda item: (item.start_char, item.end_char, item.entity_type.value)):
@@ -311,7 +297,6 @@ def dedupe_mentions(mentions: Sequence[ClinicalMention]) -> list[ClinicalMention
 
 def merge_mentions(primary: Sequence[ClinicalMention], secondary: Sequence[ClinicalMention]) -> list[ClinicalMention]:
     """Merge deterministic and LLM mentions, preferring deterministic overlaps."""
-
     merged = list(primary)
     existing_keys = {(mention.entity_type, mention.start_char, mention.end_char) for mention in primary}
     for mention in secondary:
@@ -349,7 +334,6 @@ def remap_mentions_to_source(
     Returns:
         Mentions with offsets validated against ``original_text``.
     """
-
     line_maps: list[tuple[int, int, int]] = []
     cursor = 0
     search_from = 0
@@ -387,7 +371,6 @@ def compress_note_for_llm(text: str, mentions: Sequence[ClinicalMention], *, max
     deliberately character-budgeted to map cleanly onto token budgets without
     requiring a tokenizer dependency.
     """
-
     from clinical_nlp.negation import split_sentence_spans
 
     sentences = split_sentence_spans(text)

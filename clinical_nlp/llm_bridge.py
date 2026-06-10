@@ -61,7 +61,6 @@ class LLMExtractionClient(Protocol):
 
     def extract_sync(self, text: str) -> list[ClinicalMention]:
         """Optional sync extraction path for strategy compatibility."""
-
         raise NotImplementedError
 
 
@@ -86,7 +85,6 @@ async def extract_mentions_with_retries(
     Raises:
         LLMExtractionError: If all attempts fail validation.
     """
-
     note_text = text[:max_note_chars]
     correction_context = ""
     last_error: Exception | None = None
@@ -117,7 +115,6 @@ async def extract_mentions_with_retries(
 
 def build_extraction_messages(text: str, *, correction_context: str = "") -> list[LLMMessage]:
     """Build schema-constrained extraction prompts."""
-
     schema_json = json.dumps(ClinicalMentionBatch.model_json_schema(), indent=2)
     system = (
         "You extract clinical mentions into strict JSON. "
@@ -137,7 +134,6 @@ def build_extraction_messages(text: str, *, correction_context: str = "") -> lis
 
 def parse_llm_mention_batch(raw_json: str) -> ClinicalMentionBatch:
     """Parse provider JSON into a validated mention batch."""
-
     try:
         payload = json.loads(raw_json)
     except json.JSONDecodeError as exc:
@@ -155,7 +151,6 @@ def validate_mention_plausibility(mentions: Sequence[ClinicalMention]) -> None:
     Raises:
         ValueError: If any mention carries an implausible structured value.
     """
-
     errors: list[str] = []
     for index, mention in enumerate(mentions):
         try:
@@ -171,7 +166,6 @@ def validate_mention_plausibility(mentions: Sequence[ClinicalMention]) -> None:
 
 def validate_single_mention_plausibility(mention: ClinicalMention) -> None:
     """Validate a single mention against known clinical ranges."""
-
     attributes = mention.attributes
     if mention.entity_type == EntityType.VITAL:
         measurement = str(attributes.get("measurement", mention.normalized_text or "")).casefold()

@@ -34,7 +34,6 @@ def test_deterministic_extractor_output_has_candidate_codings() -> None:
 
 def test_migrated_seed_resolves_with_release_pinning() -> None:
     """Migrated TS map: ICD-10-CM rows are FY2026-pinned, others unpinned."""
-
     seed = load_terminology_seed()
     assert len(seed) >= 80  # 86 canonical names migrated from terminologyMappings.ts
 
@@ -48,7 +47,9 @@ def test_migrated_seed_resolves_with_release_pinning() -> None:
     normalized = normalize_mentions([mention], resolver=StaticTerminologyResolver())
 
     codings = normalized[0].codings
-    assert any(c.system == CodingSystem.ICD_10_CM and c.code == "I10" and c.release_version == "FY2026" for c in codings)
+    assert any(
+        c.system == CodingSystem.ICD_10_CM and c.code == "I10" and c.release_version == "FY2026" for c in codings
+    )
     assert any(c.system == CodingSystem.SNOMED_CT and not c.is_release_pinned for c in codings)
     assert normalized[0].is_coded  # the pinned ICD-10-CM candidate qualifies
 

@@ -46,7 +46,6 @@ def build_envelope(
     text: str,
 ) -> dict[str, Any]:
     """Run extraction, rollup, and normalization into the API envelope."""
-
     if isinstance(orchestrator.extractor, HybridExtractor):
         outcome = orchestrator.extractor.extract_outcome(text)
     else:
@@ -90,7 +89,6 @@ def build_envelope(
 
 def serialize_mention(mention: ClinicalMention) -> dict[str, Any]:
     """Serialize a mention with source-text offsets for the envelope."""
-
     return {
         "text": mention.text,
         "entity_type": mention.entity_type.value,
@@ -110,7 +108,6 @@ def handle_request(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     """Dispatch one engine request to a response payload."""
-
     request_id = request.get("id")
     op = request.get("op")
     if op == "ping":
@@ -127,7 +124,6 @@ def handle_request(
 
 def main() -> int:
     """Run the NDJSON request loop until stdin closes."""
-
     orchestrator = ClinicalExtractionOrchestrator(OrchestratorConfig())
     resolver = StaticTerminologyResolver()
 
@@ -140,7 +136,7 @@ def main() -> int:
             response = handle_request(orchestrator, resolver, request)
         except json.JSONDecodeError:
             response = {"id": None, "ok": False, "error": {"code": "invalid-json"}}
-        except Exception:  # noqa: BLE001 - PHI discipline: never echo exception text.
+        except Exception:
             response = {"id": None, "ok": False, "error": {"code": "engine-error"}}
         sys.stdout.write(json.dumps(response) + "\n")
         sys.stdout.flush()

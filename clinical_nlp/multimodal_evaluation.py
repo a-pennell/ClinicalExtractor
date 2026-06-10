@@ -51,7 +51,6 @@ def evaluate_multimodal_runs(
     y_score: Sequence[float] | None = None,
 ) -> MultiModalEvaluationReport:
     """Benchmark extraction modes and optional classic ML predictions."""
-
     extraction_reports = {
         run.mode: evaluate_mentions(run.mentions, gold_mentions)
         for run in runs
@@ -76,7 +75,6 @@ def evaluate_binary_classifier(y_true: Sequence[int], y_score: Sequence[float]) 
         ROC-AUC and PR-AUC. Metrics are ``None`` when undefined because only
         one class is present.
     """
-
     if len(y_true) != len(y_score):
         msg = "y_true and y_score must have the same length."
         raise ValueError(msg)
@@ -97,7 +95,6 @@ def evaluate_binary_classifier(y_true: Sequence[int], y_score: Sequence[float]) 
 
 def roc_auc(y_true: Sequence[int], y_score: Sequence[float]) -> float:
     """Compute ROC-AUC using rank statistics with tie handling."""
-
     ranked = sorted(zip(y_score, y_true, strict=True), key=lambda item: item[0])
     rank_sum = 0.0
     index = 0
@@ -116,7 +113,6 @@ def roc_auc(y_true: Sequence[int], y_score: Sequence[float]) -> float:
 
 def average_precision(y_true: Sequence[int], y_score: Sequence[float]) -> float:
     """Compute average precision for a binary classifier."""
-
     ranked = sorted(zip(y_score, y_true, strict=True), key=lambda item: item[0], reverse=True)
     positives = sum(y_true)
     if positives == 0:

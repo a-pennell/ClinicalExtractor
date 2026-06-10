@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from collections.abc import Iterable, Mapping, Sequence
 from enum import StrEnum
-from typing import Iterable, Mapping, Sequence, cast
+from typing import cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -98,7 +99,6 @@ def evaluate_mentions(
     Raises:
         ValueError: If ``partial_threshold`` is outside ``[0, 1]``.
     """
-
     if not 0.0 <= partial_threshold <= 1.0:
         msg = "partial_threshold must be between 0 and 1."
         raise ValueError(msg)
@@ -138,7 +138,6 @@ def match_mentions(
     Greedy matching by score is deterministic and performant for fixture-sized
     eval sets; it can be replaced with Hungarian matching for large corpora.
     """
-
     candidates: list[tuple[float, int, int, bool]] = []
     for predicted_index, predicted_mention in enumerate(predicted):
         for gold_index, gold_mention in enumerate(gold):
@@ -174,17 +173,13 @@ def match_mentions(
 
 def are_comparable(predicted: ClinicalMention, gold: ClinicalMention) -> bool:
     """Return whether predicted and gold mentions can be matched."""
-
     if predicted.entity_type != gold.entity_type:
         return False
-    if predicted.source_id and gold.source_id and predicted.source_id != gold.source_id:
-        return False
-    return True
+    return not (predicted.source_id and gold.source_id and predicted.source_id != gold.source_id)
 
 
 def is_exact_match(predicted: ClinicalMention, gold: ClinicalMention) -> bool:
     """Return whether two mentions have the same label and exact span."""
-
     return are_comparable(predicted, gold) and predicted.span == gold.span
 
 
@@ -194,7 +189,6 @@ def span_overlap_score(
     strategy: OverlapStrategy,
 ) -> float:
     """Score partial mention overlap."""
-
     if strategy == OverlapStrategy.CHAR_JACCARD:
         return char_span_jaccard(predicted.span, gold.span)
     return token_jaccard(predicted.text, gold.text)
@@ -202,7 +196,6 @@ def span_overlap_score(
 
 def char_span_jaccard(predicted_span: tuple[int, int], gold_span: tuple[int, int]) -> float:
     """Return Jaccard similarity for half-open character spans."""
-
     predicted_start, predicted_end = predicted_span
     gold_start, gold_end = gold_span
     intersection = max(0, min(predicted_end, gold_end) - max(predicted_start, gold_start))
@@ -214,7 +207,6 @@ def char_span_jaccard(predicted_span: tuple[int, int], gold_span: tuple[int, int
 
 def token_jaccard(predicted_text: str, gold_text: str) -> float:
     """Return token-set Jaccard similarity for two mention strings."""
-
     predicted_tokens = set(tokenize_for_overlap(predicted_text))
     gold_tokens = set(tokenize_for_overlap(gold_text))
     if not predicted_tokens and not gold_tokens:
@@ -226,13 +218,11 @@ def token_jaccard(predicted_text: str, gold_text: str) -> float:
 
 def tokenize_for_overlap(text: str) -> list[str]:
     """Tokenize text for overlap scoring."""
-
     return re.findall(r"[A-Za-z0-9]+", text.casefold())
 
 
 def build_metric_summary(match_count: int, predicted_count: int, gold_count: int) -> MetricSummary:
     """Build precision, recall, and F1 metrics from counts."""
-
     false_positive = max(0, predicted_count - match_count)
     false_negative = max(0, gold_count - match_count)
     precision = safe_ratio(match_count, predicted_count)
@@ -253,7 +243,6 @@ def build_metrics_by_type(
     matches: Sequence[MentionMatch],
 ) -> Mapping[EntityType, MetricSummary]:
     """Build PRF metrics grouped by entity type."""
-
     predicted_counts: dict[EntityType, int] = defaultdict(int)
     gold_counts: dict[EntityType, int] = defaultdict(int)
     match_counts: dict[EntityType, int] = defaultdict(int)
@@ -283,7 +272,6 @@ def score_attribute_accuracy(
     attribute_names: Sequence[str],
 ) -> Mapping[str, AttributeAccuracy]:
     """Calculate categorical attribute accuracy over matched mentions."""
-
     scores: dict[str, AttributeAccuracy] = {}
     for attribute_name in attribute_names:
         correct = 0
@@ -313,7 +301,6 @@ def score_attribute_accuracy(
 
 def get_attribute_value(mention: ClinicalMention, attribute_name: str) -> object:
     """Get a field or flat attribute value from a mention."""
-
     if hasattr(mention, attribute_name):
         return cast(object, getattr(mention, attribute_name))
     return mention.attributes.get(attribute_name)
@@ -325,7 +312,6 @@ def safe_ratio(numerator: int, denominator: int) -> float | None:
     Audit C3: the previous treat-as-perfect convention reported precision
     1.000 for entity types with zero predictions, masking absent coverage.
     """
-
     if denominator == 0:
         return None
     return numerator / denominator
@@ -333,7 +319,6 @@ def safe_ratio(numerator: int, denominator: int) -> float | None:
 
 def harmonic_mean(precision: float | None, recall: float | None) -> float | None:
     """Calculate F1 as harmonic mean; ``None`` when either input is n/a."""
-
     if precision is None or recall is None:
         return None
     if precision + recall == 0:

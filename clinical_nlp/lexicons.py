@@ -43,5 +43,4 @@ CHRONIC_CONDITION_TERMS: frozenset[str] = frozenset(
 
 def is_chronic_condition(canonical_text: str) -> bool:
     """Return whether a canonical string names a known chronic condition."""
-
     return canonical_text.casefold().strip() in CHRONIC_CONDITION_TERMS

@@ -5,7 +5,9 @@ from clinical_nlp.rollup import ReviewPriority, rollup_mentions
 from clinical_nlp.schemas import AssertionStatus, ClinicalMention, EntityType
 
 
-def mention_at(text: str, phrase: str, occurrence: int = 1, entity_type: EntityType = EntityType.SYMPTOM) -> ClinicalMention:
+def mention_at(
+    text: str, phrase: str, occurrence: int = 1, entity_type: EntityType = EntityType.SYMPTOM
+) -> ClinicalMention:
     start = -1
     for _ in range(occurrence):
         start = text.index(phrase, start + 1)
@@ -19,7 +21,6 @@ def test_b6_contradicting_mentions_roll_up_to_conflicting_not_absent() -> None:
     resolution; it must never resolve silently in either direction, and both
     mentions keep their own assertions.
     """
-
     text = "Denies chest pain.\nNow reports chest pain worse with exertion."
     resolver = NegationScopeResolver()
     mentions = resolver.annotate_mentions(text, [mention_at(text, "chest pain", 1), mention_at(text, "chest pain", 2)])
@@ -53,7 +54,6 @@ def test_chronic_condition_mixed_temporal_rolls_up_to_present() -> None:
     (Phase 1 behavior — all mixed temporal CONFLICTING — was superseded by the
     planned C2 work; the non-chronic case below still conflicts.)
     """
-
     text = "HTN noted. HTN again."
     historical = mention_at(text, "HTN", 1, EntityType.PROBLEM).with_assertion(AssertionStatus.HISTORICAL)
     present = mention_at(text, "HTN", 2, EntityType.PROBLEM).with_assertion(AssertionStatus.PRESENT)

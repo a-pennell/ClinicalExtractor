@@ -46,7 +46,6 @@ class VitalMeasurement(BaseModel):
     @classmethod
     def finite_value(cls, value: float) -> float:
         """Require finite numeric values."""
-
         if not math.isfinite(value):
             msg = "Vital value must be finite."
             raise ValueError(msg)
@@ -55,7 +54,6 @@ class VitalMeasurement(BaseModel):
     @model_validator(mode="after")
     def validate_range(self) -> VitalMeasurement:
         """Validate type-specific physiologic ranges."""
-
         ranges = {
             VitalType.HEART_RATE: (20.0, 300.0),
             VitalType.RESPIRATORY_RATE: (4.0, 80.0),
@@ -88,7 +86,6 @@ class BloodPressureMeasurement(BaseModel):
     @model_validator(mode="after")
     def validate_ordering(self) -> BloodPressureMeasurement:
         """Require systolic pressure to exceed diastolic pressure."""
-
         if self.systolic <= self.diastolic:
             msg = "Systolic blood pressure must be greater than diastolic blood pressure."
             raise ValueError(msg)
@@ -110,7 +107,6 @@ class LabValue(BaseModel):
     @classmethod
     def strip_name(cls, value: str) -> str:
         """Strip whitespace from lab names."""
-
         stripped = value.strip()
         if not stripped:
             msg = "Lab name must not be blank."
@@ -121,7 +117,6 @@ class LabValue(BaseModel):
     @classmethod
     def finite_optional_value(cls, value: float | None) -> float | None:
         """Require finite numeric lab values when present."""
-
         if value is not None and not math.isfinite(value):
             msg = "Lab values must be finite."
             raise ValueError(msg)
@@ -130,11 +125,10 @@ class LabValue(BaseModel):
     @model_validator(mode="after")
     def validate_reference_range(self) -> LabValue:
         """Validate optional reference ranges."""
-
-        if self.reference_low is not None and self.reference_high is not None:
-            if self.reference_low >= self.reference_high:
-                msg = "reference_low must be less than reference_high."
-                raise ValueError(msg)
+        has_both_bounds = self.reference_low is not None and self.reference_high is not None
+        if has_both_bounds and self.reference_low >= self.reference_high:
+            msg = "reference_low must be less than reference_high."
+            raise ValueError(msg)
         if self.value < 0 and self.name.casefold() not in {"base excess"}:
             msg = f"{self.name} should not be negative in this prototype validator."
             raise ValueError(msg)
@@ -153,7 +147,6 @@ class ClinicalScore(BaseModel):
     @classmethod
     def normalize_scale(cls, value: str) -> str:
         """Normalize score scale labels."""
-
         stripped = value.strip()
         if not stripped:
             msg = "Clinical score scale must not be blank."
@@ -163,7 +156,6 @@ class ClinicalScore(BaseModel):
     @model_validator(mode="after")
     def validate_score_range(self) -> ClinicalScore:
         """Validate known score ranges."""
-
         ranges = {
             "phq-9": (0, 27),
             "gad-7": (0, 21),
@@ -204,7 +196,6 @@ class RangeOfMotionMeasurement(BaseModel):
     @classmethod
     def strip_optional_text(cls, value: str | None) -> str | None:
         """Strip whitespace from ROM text fields."""
-
         if not isinstance(value, str):
             return value
         stripped = value.strip()
@@ -231,7 +222,6 @@ class StrengthGrade(BaseModel):
     @classmethod
     def parse_raw_grade(cls, data: object) -> object:
         """Parse ``raw_grade`` into ``normalized_grade``."""
-
         if not isinstance(data, dict) or "raw_grade" not in data:
             return data
         raw_grade = str(data["raw_grade"]).strip()
@@ -251,7 +241,6 @@ class StrengthGrade(BaseModel):
 
 def normalize_temperature_unit(unit: str | None) -> TemperatureUnit:
     """Normalize temperature units, defaulting to Fahrenheit for US notes."""
-
     if unit is None:
         return TemperatureUnit.FAHRENHEIT
     normalized = unit.strip().casefold()
@@ -265,13 +254,11 @@ def normalize_temperature_unit(unit: str | None) -> TemperatureUnit:
 
 def validate_vital(vital_type: VitalType | str, value: float, unit: str | None = None) -> VitalMeasurement:
     """Validate a vital sign measurement."""
-
     return VitalMeasurement(vital_type=VitalType(vital_type), value=value, unit=unit)
 
 
 def validate_blood_pressure(systolic: int, diastolic: int) -> BloodPressureMeasurement:
     """Validate a blood pressure measurement."""
-
     return BloodPressureMeasurement(systolic=systolic, diastolic=diastolic)
 
 
@@ -283,7 +270,6 @@ def validate_lab_value(
     reference_high: float | None = None,
 ) -> LabValue:
     """Validate a lab value."""
-
     return LabValue(
         name=name,
         value=value,
@@ -295,13 +281,11 @@ def validate_lab_value(
 
 def validate_clinical_score(scale: str, value: int) -> ClinicalScore:
     """Validate a clinical score."""
-
     return ClinicalScore(scale=scale, value=value)
 
 
 def validate_pain_scale(value: int) -> PainScale:
     """Validate a 0-10 pain scale."""
-
     return PainScale(value=value)
 
 
@@ -313,7 +297,6 @@ def validate_rom(
     laterality: str | None = None,
 ) -> RangeOfMotionMeasurement:
     """Validate a range-of-motion value."""
-
     return RangeOfMotionMeasurement(
         movement=movement,
         degrees=degrees,
@@ -324,5 +307,4 @@ def validate_rom(
 
 def validate_strength_grade(raw_grade: str) -> StrengthGrade:
     """Validate a manual muscle testing grade."""
-
     return StrengthGrade(raw_grade=raw_grade, normalized_grade=0.0)

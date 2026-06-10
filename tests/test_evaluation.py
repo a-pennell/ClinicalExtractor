@@ -14,7 +14,6 @@ def mention(
     source_id: str = "note-1",
 ) -> ClinicalMention:
     """Create a clinical mention for tests."""
-
     return ClinicalMention(
         text=text,
         entity_type=entity_type,
@@ -27,7 +26,6 @@ def mention(
 
 def test_evaluate_mentions_reports_exact_and_partial_metrics() -> None:
     """Partial matching should reward overlapping spans while exact remains strict."""
-
     gold = [
         mention("chest pain", 7, 17, EntityType.SYMPTOM, assertion=AssertionStatus.ABSENT),
         mention("shortness of breath", 27, 46, EntityType.SYMPTOM),
@@ -50,7 +48,6 @@ def test_evaluate_mentions_reports_exact_and_partial_metrics() -> None:
 
 def test_evaluate_mentions_tracks_attribute_mismatches() -> None:
     """Assertion accuracy should identify matched spans with incorrect attributes."""
-
     gold = [mention("SI", 10, 12, EntityType.RISK, assertion=AssertionStatus.ABSENT)]
     predicted = [mention("SI", 10, 12, EntityType.RISK, assertion=AssertionStatus.PRESENT)]
 
@@ -65,7 +62,6 @@ def test_evaluate_mentions_tracks_attribute_mismatches() -> None:
 
 def test_token_jaccard_partial_matching() -> None:
     """Token overlap can be used when character spans are noisy."""
-
     gold = [mention("low back pain", 100, 113, EntityType.PROBLEM)]
     predicted = [mention("back pain", 300, 309, EntityType.PROBLEM)]
 

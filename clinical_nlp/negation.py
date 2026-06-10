@@ -10,9 +10,9 @@ clinical assertion model later.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Iterable, Sequence
 
 from pydantic import BaseModel, ConfigDict
 
@@ -104,7 +104,6 @@ class NegationScopeResolver:
         post_scope_chars: int = 40,
     ) -> None:
         """Initialize compiled assertion-scope patterns."""
-
         self.pre_negation_triggers = tuple(
             pre_negation_triggers
             or (
@@ -238,12 +237,10 @@ class NegationScopeResolver:
         Returns:
             New ``ClinicalMention`` objects with assertion labels updated.
         """
-
         return [self.resolve_mention(text, mention).mention for mention in mentions]
 
     def resolve_mentions(self, text: str, mentions: Iterable[ClinicalMention]) -> list[AssertionScopeResult]:
         """Resolve scoped assertion for multiple mentions."""
-
         sentence_spans = split_sentence_spans(text)
         return [self.resolve_mention(text, mention, sentence_spans=sentence_spans) for mention in mentions]
 
@@ -259,7 +256,6 @@ class NegationScopeResolver:
         Raises:
             ValueError: If mention offsets are outside the source text.
         """
-
         if mention.end_char > len(text):
             msg = f"Mention span {mention.span} exceeds source text length {len(text)}."
             raise ValueError(msg)
@@ -282,7 +278,9 @@ class NegationScopeResolver:
 
         pre_negation_trigger = find_active_trigger(before, self._pre_negation_regex, self._termination_regex)
 
-        conditional = None if pre_negation_trigger else find_conditional_circumstance(after_sentence, self._termination_regex)
+        conditional = (
+            None if pre_negation_trigger else find_conditional_circumstance(after_sentence, self._termination_regex)
+        )
         if conditional:
             return self._build_result(
                 mention,
@@ -391,7 +389,6 @@ class NegationScopeResolver:
         not HISTORICAL/FAMILY_HISTORY: a negation trigger immediately scoping
         the family/historical cue wins.
         """
-
         scoped = trim_to_last_termination(before, self._termination_regex)
         matches = list(trigger_regex.finditer(scoped))
         if not matches:
@@ -413,7 +410,6 @@ class NegationScopeResolver:
 
     def _is_chronic_active(self, mention: ClinicalMention, after_sentence: str) -> bool:
         """Return whether the chronic-active exception (A3 rule 4) applies."""
-
         if not is_chronic_condition(mention.canonical_text):
             return False
         return bool(ACTIVE_MANAGEMENT_REGEX.search(after_sentence))
@@ -443,7 +439,6 @@ def split_sentence_spans(text: str) -> list[SentenceSpan]:
     when followed by whitespace or the end of the document. This avoids many
     decimal-number failures while staying dependency-free.
     """
-
     spans: list[SentenceSpan] = []
     start = 0
     for match in re.finditer(r"(?:[.!?](?=\s|$)|\n+)", text):
@@ -456,7 +451,6 @@ def split_sentence_spans(text: str) -> list[SentenceSpan]:
 
 def append_sentence_span(spans: list[SentenceSpan], text: str, start: int, end: int) -> None:
     """Append a trimmed sentence span if it contains non-whitespace text."""
-
     raw = text[start:end]
     leading = len(raw) - len(raw.lstrip())
     trailing = len(raw.rstrip())
@@ -475,7 +469,6 @@ def append_sentence_span(spans: list[SentenceSpan], text: str, start: int, end: 
 
 def find_sentence_for_mention(sentences: Sequence[SentenceSpan], mention: ClinicalMention) -> SentenceSpan:
     """Find the sentence span containing a mention."""
-
     for sentence in sentences:
         if sentence.start_char <= mention.start_char < sentence.end_char:
             return sentence
@@ -485,7 +478,6 @@ def find_sentence_for_mention(sentences: Sequence[SentenceSpan], mention: Clinic
 
 def compile_phrase_regex(phrases: Sequence[str]) -> re.Pattern[str]:
     """Compile phrases into a boundary-aware regex."""
-
     if not phrases:
         return re.compile(r"a\A")
     escaped = [re.escape(phrase).replace(r"\ ", r"\s+") for phrase in sorted(phrases, key=len, reverse=True)]
@@ -499,7 +491,6 @@ def find_active_trigger(
     termination_regex: re.Pattern[str],
 ) -> str | None:
     """Find the nearest trigger not cut off by a termination cue."""
-
     scoped_text = trim_to_last_termination(text_before_mention, termination_regex)
     matches = list(trigger_regex.finditer(scoped_text))
     if not matches:
@@ -516,7 +507,6 @@ def find_post_negation(
     termination_regex: re.Pattern[str],
 ) -> str | None:
     """Find a post-negation trigger before any termination cue."""
-
     termination_match = termination_regex.search(text_after_mention)
     search_text = text_after_mention[: termination_match.start()] if termination_match else text_after_mention
     match = trigger_regex.search(search_text)
@@ -525,7 +515,6 @@ def find_post_negation(
 
 def find_conditional_circumstance(text_after_mention: str, termination_regex: re.Pattern[str]) -> str | None:
     """Find a recurring trigger circumstance after the mention (A3 rule 2)."""
-
     termination_match = termination_regex.search(text_after_mention)
     search_text = text_after_mention[: termination_match.start()] if termination_match else text_after_mention
     match = CONDITIONAL_CIRCUMSTANCE_REGEX.search(search_text)
@@ -545,7 +534,6 @@ def find_unbound_backward_cue(
     mention but is too far away for the windowed post rules to bind safely;
     the mention is unresolvable rather than silently present (audit C2).
     """
-
     termination_match = termination_regex.search(text_after_mention)
     search_text = text_after_mention[: termination_match.start()] if termination_match else text_after_mention
     match = backward_regex.search(search_text)
@@ -556,7 +544,6 @@ def find_unbound_backward_cue(
 
 def trim_to_last_termination(text: str, termination_regex: re.Pattern[str]) -> str:
     """Return text after the last termination cue."""
-
     matches = list(termination_regex.finditer(text))
     if not matches:
         return text

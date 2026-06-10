@@ -35,7 +35,6 @@ from clinical_nlp.schemas import ClinicalMention  # noqa: E402
 
 def load_gold_notes(gold_dir: Path) -> list[dict]:
     """Load gold notes from every JSONL file in a directory."""
-
     notes: list[dict] = []
     for path in sorted(gold_dir.glob("*.jsonl")):
         with path.open(encoding="utf-8") as handle:
@@ -45,7 +44,6 @@ def load_gold_notes(gold_dir: Path) -> list[dict]:
 
 def to_mentions(note: dict) -> list[ClinicalMention]:
     """Validate gold mention payloads, including span/text agreement."""
-
     mentions = []
     for raw in note["mentions"]:
         mention = ClinicalMention(source_id=note["source_id"], **raw)
@@ -59,7 +57,6 @@ def to_mentions(note: dict) -> list[ClinicalMention]:
 
 def run(gold_dir: Path, min_f1: float) -> int:
     """Run extraction over gold notes and print per-type PRF."""
-
     notes = load_gold_notes(gold_dir)
     if not notes:
         print(f"No gold notes found in {gold_dir}.", file=sys.stderr)
@@ -88,13 +85,11 @@ def run(gold_dir: Path, min_f1: float) -> int:
 
 def fmt(value: float | None) -> str:
     """Format a metric, rendering empty denominators as n/a (audit C3)."""
-
     return f"{value:>8.3f}" if value is not None else f"{'n/a':>8}"
 
 
 def print_report(report: EvaluationReport, *, note_count: int) -> None:
     """Print overall and per-entity-type metrics."""
-
     print(f"Gold notes: {note_count}")
     print(f"{'':24}{'P':>8}{'R':>8}{'F1':>8}{'TP':>6}{'FP':>6}{'FN':>6}")
     for label, summary in (("overall (exact)", report.exact), ("overall (partial)", report.partial)):
@@ -121,7 +116,6 @@ def print_assertion_breakdown(
     conditional, hypothetical, possible, conflicting, unknown) so the C2
     classes are visible in every run, with n/a for unrepresented classes.
     """
-
     from clinical_nlp.schemas import AssertionStatus
 
     assertion = report.attribute_accuracy.get("assertion")
@@ -148,7 +142,6 @@ def print_assertion_breakdown(
 
 def main() -> int:
     """CLI entry point."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gold-dir", type=Path, default=REPO_ROOT / "data" / "gold")
     parser.add_argument("--min-f1", type=float, default=0.0, help="Fail (exit 1) if partial F1 is below this gate.")

@@ -7,13 +7,11 @@ from clinical_nlp.schemas import ClinicalMention, EntityType
 
 def mention(text: str, start: int, end: int) -> ClinicalMention:
     """Create a symptom mention."""
-
     return ClinicalMention(text=text, entity_type=EntityType.SYMPTOM, start_char=start, end_char=end)
 
 
 def test_binary_classifier_metrics_are_computed_without_sklearn() -> None:
     """ROC-AUC and PR-AUC should work through pure Python fallback metrics."""
-
     report = evaluate_binary_classifier([0, 0, 1, 1], [0.1, 0.4, 0.35, 0.9])
 
     assert report.roc_auc == 0.75
@@ -23,7 +21,6 @@ def test_binary_classifier_metrics_are_computed_without_sklearn() -> None:
 
 def test_multimodal_evaluation_compares_extraction_modes_and_ml() -> None:
     """Rule-based and LLM extraction reports should be evaluated side by side."""
-
     gold = [mention("chest pain", 0, 10)]
     nlp_run = ExtractionRun(mode=ExtractionMode.NLP, mentions=[mention("pain", 6, 10)])
     llm_run = ExtractionRun(mode=ExtractionMode.LLM, mentions=[mention("chest pain", 0, 10)])

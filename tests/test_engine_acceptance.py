@@ -23,20 +23,21 @@ from clinical_nlp.service import build_envelope
 
 GOLD_PATH = Path(__file__).parent.parent / "data" / "gold" / "seed_notes.jsonl"
 
+Engine = tuple[ClinicalExtractionOrchestrator, StaticTerminologyResolver]
+
 
 @pytest.fixture(scope="module")
-def engine() -> tuple[ClinicalExtractionOrchestrator, StaticTerminologyResolver]:
+def engine() -> Engine:
     return ClinicalExtractionOrchestrator(OrchestratorConfig()), StaticTerminologyResolver()
 
 
-def envelope_for(engine: tuple[ClinicalExtractionOrchestrator, StaticTerminologyResolver], text: str) -> dict:
+def envelope_for(engine: Engine, text: str) -> dict:
     orchestrator, resolver = engine
     return build_envelope(orchestrator, resolver, text)
 
 
-def test_criterion_1_envelope_for_every_gold_note_with_validated_spans(engine) -> None:
+def test_criterion_1_envelope_for_every_gold_note_with_validated_spans(engine: Engine) -> None:
     """Criterion 1: envelope returned for all gold notes; spans index source text."""
-
     notes = [json.loads(line) for line in GOLD_PATH.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert len(notes) >= 6
 
@@ -51,17 +52,15 @@ def test_criterion_1_envelope_for_every_gold_note_with_validated_spans(engine) -
             assert isinstance(entity["is_coded"], bool)
 
 
-def test_criterion_2_negation_survives_to_envelope(engine) -> None:
+def test_criterion_2_negation_survives_to_envelope(engine: Engine) -> None:
     """Termination-cue / denial negation reaches the envelope (TS gap, engine fixes)."""
-
     envelope = envelope_for(engine, "Denies SI. Reports HR 88.")
     si = next(entity for entity in envelope["entities"] if entity["canonical_text"] == "suicidal ideation")
     assert si["assertion"] == "absent"
 
 
-def test_criterion_2_contradiction_rolls_up_conflicting_in_envelope(engine) -> None:
+def test_criterion_2_contradiction_rolls_up_conflicting_in_envelope(engine: Engine) -> None:
     """B6 end-to-end: contradicting SI mentions -> conflicting entity, high priority."""
-
     envelope = envelope_for(engine, "Denies SI.\nLater the patient reports SI with a plan.")
     si = next(entity for entity in envelope["entities"] if entity["canonical_text"] == "suicidal ideation")
     assert si["assertion"] == "conflicting"
@@ -69,17 +68,15 @@ def test_criterion_2_contradiction_rolls_up_conflicting_in_envelope(engine) -> N
     assert len(si["mention_indexes"]) == 2
 
 
-def test_criterion_2_codings_carry_release_pinning_flags(engine) -> None:
+def test_criterion_2_codings_carry_release_pinning_flags(engine: Engine) -> None:
     """Envelope codings expose is_coded release-pinning (audit B5)."""
-
     envelope = envelope_for(engine, "Denies SI.")
     si = next(entity for entity in envelope["entities"] if entity["canonical_text"] == "suicidal ideation")
     assert si["codings"]  # SNOMED candidate present
     assert "is_coded" in si  # unpinned SNOMED starter -> False until pinned
 
 
-def test_envelope_serializes_to_json(engine) -> None:
+def test_envelope_serializes_to_json(engine: Engine) -> None:
     """The envelope must be JSON-serializable for the stdio transport."""
-
     envelope = envelope_for(engine, "BP 142/91. PHQ-9 14.")
     json.dumps(envelope)  # raises if any non-serializable value leaked in

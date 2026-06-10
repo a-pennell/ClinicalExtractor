@@ -17,7 +17,6 @@ class FakeLLMClient:
 
     def __init__(self, responses: Sequence[str]) -> None:
         """Initialize queued JSON responses."""
-
         self.responses = list(responses)
         self.calls = 0
 
@@ -29,7 +28,6 @@ class FakeLLMClient:
         temperature: float = 0.0,
     ) -> str:
         """Return the next queued response."""
-
         assert response_schema is ClinicalMentionBatch
         assert temperature == 0.0
         assert messages
@@ -38,7 +36,6 @@ class FakeLLMClient:
 
     def extract_sync(self, text: str) -> list[ClinicalMention]:
         """Synchronous extraction used by strategy tests."""
-
         start = text.casefold().find("family history")
         if start < 0:
             start = 0
@@ -56,7 +53,6 @@ class FakeLLMClient:
 
 def mention_json(value: int = 7) -> str:
     """Build a valid mention batch JSON payload."""
-
     return json.dumps(
         {
             "mentions": [
@@ -78,7 +74,6 @@ def mention_json(value: int = 7) -> str:
 
 def test_orchestrator_switches_modes_and_preserves_schema() -> None:
     """All extractor modes should return ClinicalMention objects."""
-
     nlp_orchestrator = ClinicalExtractionOrchestrator(OrchestratorConfig(mode=ExtractionMode.NLP))
     nlp_mentions = nlp_orchestrator.extract("HR 88. Denies SI.")
 
@@ -88,7 +83,6 @@ def test_orchestrator_switches_modes_and_preserves_schema() -> None:
 
 def test_hybrid_extractor_routes_ambiguous_context_to_llm() -> None:
     """Hybrid mode should escalate complex family-history context."""
-
     hybrid = HybridExtractor(NLPExtractor(), LLMExtractor(FakeLLMClient([mention_json()])))
     mentions = hybrid.extract("Family history: mother with diabetes. HR 90.")
 
@@ -98,7 +92,6 @@ def test_hybrid_extractor_routes_ambiguous_context_to_llm() -> None:
 
 def test_llm_self_correction_retries_after_plausibility_error() -> None:
     """Invalid LLM values should trigger correction feedback and retry."""
-
     invalid = mention_json(value=99)
     valid = mention_json(value=6)
     client = FakeLLMClient([invalid, valid])
