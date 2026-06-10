@@ -27,13 +27,18 @@ export type AssertionStatus =
   | "present"
   | "absent"
   | "possible"
+  | "conditional"
+  | "hypothetical"
   | "historical"
   | "family-history"
   | "planned"
   | "ordered"
   // B6: entity-level status when merged mentions disagree; never resolves
   // silently to absent or present. Always high review priority.
-  | "conflicting";
+  | "conflicting"
+  // C2: the engine abolished default-PRESENT; unresolvable assertions are
+  // surfaced as unknown and always reviewed.
+  | "unknown";
 
 export type Confidence = "high" | "medium" | "low";
 

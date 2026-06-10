@@ -3,12 +3,18 @@ import { extractClinicalEntities } from "./extractClinicalEntities";
 import type { ClinicalEntity, ExtractionOptions } from "./types";
 
 /**
- * AUDIT EDGE-CASE TESTS (docs/pre-review-audit.md).
+ * AUDIT EDGE-CASE TESTS (docs/pre-review-audit.md) — FROZEN LEGACY EXTRACTOR.
  *
- * Tests written with `it.fails` document KNOWN GAPS confirmed empirically
- * during the pre-review audit: they pass only because the inner expectation
- * fails. When the gap is fixed, the `it.fails` test will start failing —
- * remove the modifier and keep the assertion as a regression test.
+ * Post-ADR-001 these `it.fails` cases document gaps in the FROZEN in-browser
+ * extractor that will NOT be fixed (the TS inference path is demoted to a
+ * fallback). The authoritative, PASSING acceptance tests for this behavior run
+ * against the Python engine:
+ *   - tests/test_clinical_edge_cases.py  (resolver-level assertion vocabulary)
+ *   - tests/test_engine_acceptance.py    (end-to-end envelope, ADR-001 §accept.)
+ *   - tests/test_rollup.py               (B6 conflict-aware rollup)
+ * Laterality (C8) is handled in Phase 6; misspelling tolerance is gated on the
+ * labeling plan (dictionary expansion is out of scope per the remediation
+ * ground rules). These TS copies remain only as a record of the legacy gaps.
  */
 
 const options: ExtractionOptions = { specialty: "mixed", mode: "auto" };

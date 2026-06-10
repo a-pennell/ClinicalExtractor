@@ -283,7 +283,7 @@ const factories: PatternFactory[] = [
     displayName: "Family history",
     specialties: ["primary-care", "mental-health", "physical-therapy", "mixed"],
     regex:
-      /\b(?:FHx|family history(?: of)?)\s*[:\-]?\s*(?:(mother|father|sister|brother|parent|maternal grandmother|paternal grandmother|maternal grandfather|paternal grandfather)\s+(?:with|has|had)\s+)?(diabetes|DM|colon cancer|breast cancer|heart disease|CAD|depression|bipolar disorder)\b/gi,
+      /\b(?:FHx|family history(?: of)?)\s*[:-]?\s*(?:(mother|father|sister|brother|parent|maternal grandmother|paternal grandmother|maternal grandfather|paternal grandfather)\s+(?:with|has|had)\s+)?(diabetes|DM|colon cancer|breast cancer|heart disease|CAD|depression|bipolar disorder)\b/gi,
     buildCanonicalName: (match) => `family history of ${normalizeFamilyCondition(match[2])}`,
     buildDisplayName: (match) => `Family history of ${normalizeFamilyCondition(match[2])}`,
     buildAttributes: (match) => ({
@@ -480,7 +480,7 @@ const factories: PatternFactory[] = [
     displayName: "Allergy",
     specialties: ["primary-care", "mental-health", "physical-therapy", "mixed"],
     regex:
-      /\b(?:allerg(?:y|ies)(?:\s+to)?|allergic\s+to)\s*[:\-]?\s*(penicillin|pcn|sulfa|sulfonamides?|latex|peanuts?|shellfish|amoxicillin)\b(?:\s*(?:-|with|causes?|caused|reaction:?|rxn:?)\s*([a-z][a-z\s/-]{2,40}))?/gi,
+      /\b(?:allerg(?:y|ies)(?:\s+to)?|allergic\s+to)\s*[:-]?\s*(penicillin|pcn|sulfa|sulfonamides?|latex|peanuts?|shellfish|amoxicillin)\b(?:\s*(?:-|with|causes?|caused|reaction:?|rxn:?)\s*([a-z][a-z\s/-]{2,40}))?/gi,
     buildCanonicalName: (match) => `${normalizeSubstance(match[1])} allergy`,
     buildDisplayName: (match) => `${titleCase(normalizeSubstance(match[1]))} allergy`,
     buildAttributes: (match) => ({

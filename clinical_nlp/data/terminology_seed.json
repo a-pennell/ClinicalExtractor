@@ -1,0 +1,974 @@
+[
+ {
+  "canonical_name": "hypertension",
+  "system": "ICD-10-CM",
+  "code": "I10",
+  "display": "Essential (primary) hypertension",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": "Starter mapping for unspecified hypertension; final coding depends on documentation and coding context."
+ },
+ {
+  "canonical_name": "hypertension",
+  "system": "SNOMED-CT",
+  "code": "38341003",
+  "display": "Hypertensive disorder, systemic arterial",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "type 2 diabetes mellitus",
+  "system": "ICD-10-CM",
+  "code": "E11.9",
+  "display": "Type 2 diabetes mellitus without complications",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Unspecified candidate only; complications, insulin use, and other details can change coding."
+ },
+ {
+  "canonical_name": "type 2 diabetes mellitus",
+  "system": "SNOMED-CT",
+  "code": "44054006",
+  "display": "Type 2 diabetes mellitus",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "hyperlipidemia",
+  "system": "ICD-10-CM",
+  "code": "E78.5",
+  "display": "Hyperlipidemia, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "hyperlipidemia",
+  "system": "SNOMED-CT",
+  "code": "55822004",
+  "display": "Hyperlipidemia",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "asthma",
+  "system": "ICD-10-CM",
+  "code": "J45.909",
+  "display": "Unspecified asthma, uncomplicated",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Severity, persistence, and exacerbation status are not established by a simple asthma mention."
+ },
+ {
+  "canonical_name": "asthma",
+  "system": "SNOMED-CT",
+  "code": "195967001",
+  "display": "Asthma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "chronic obstructive pulmonary disease",
+  "system": "ICD-10-CM",
+  "code": "J44.9",
+  "display": "Chronic obstructive pulmonary disease, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "chronic obstructive pulmonary disease",
+  "system": "SNOMED-CT",
+  "code": "13645005",
+  "display": "Chronic obstructive lung disease",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "coronary artery disease",
+  "system": "ICD-10-CM",
+  "code": "I25.10",
+  "display": "Atherosclerotic heart disease of native coronary artery without angina pectoris",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Final coding depends on native vessel, graft status, and angina documentation."
+ },
+ {
+  "canonical_name": "coronary artery disease",
+  "system": "SNOMED-CT",
+  "code": "53741008",
+  "display": "Coronary arteriosclerosis",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "congestive heart failure",
+  "system": "ICD-10-CM",
+  "code": "I50.9",
+  "display": "Heart failure, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Type, acuity, and systolic/diastolic status require review."
+ },
+ {
+  "canonical_name": "congestive heart failure",
+  "system": "SNOMED-CT",
+  "code": "42343007",
+  "display": "Congestive heart failure",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "chronic kidney disease",
+  "system": "ICD-10-CM",
+  "code": "N18.9",
+  "display": "Chronic kidney disease, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "CKD stage is not specified."
+ },
+ {
+  "canonical_name": "chronic kidney disease",
+  "system": "SNOMED-CT",
+  "code": "709044004",
+  "display": "Chronic kidney disease",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "obstructive sleep apnea",
+  "system": "ICD-10-CM",
+  "code": "G47.33",
+  "display": "Obstructive sleep apnea (adult) (pediatric)",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "obstructive sleep apnea",
+  "system": "SNOMED-CT",
+  "code": "78275009",
+  "display": "Obstructive sleep apnea syndrome",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "obesity",
+  "system": "ICD-10-CM",
+  "code": "E66.9",
+  "display": "Obesity, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "BMI class, severity, and comorbidity context require review."
+ },
+ {
+  "canonical_name": "obesity",
+  "system": "SNOMED-CT",
+  "code": "414916001",
+  "display": "Obesity",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "chest pain",
+  "system": "ICD-10-CM",
+  "code": "R07.9",
+  "display": "Chest pain, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Symptom code candidate; not appropriate if a definitive diagnosis explains the symptom."
+ },
+ {
+  "canonical_name": "chest pain",
+  "system": "SNOMED-CT",
+  "code": "29857009",
+  "display": "Chest pain",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "shortness of breath",
+  "system": "ICD-10-CM",
+  "code": "R06.02",
+  "display": "Shortness of breath",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "shortness of breath",
+  "system": "SNOMED-CT",
+  "code": "267036007",
+  "display": "Dyspnea",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "cough",
+  "system": "ICD-10-CM",
+  "code": "R05.9",
+  "display": "Cough, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "fever",
+  "system": "ICD-10-CM",
+  "code": "R50.9",
+  "display": "Fever, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "fatigue",
+  "system": "ICD-10-CM",
+  "code": "R53.83",
+  "display": "Other fatigue",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "dizziness",
+  "system": "ICD-10-CM",
+  "code": "R42",
+  "display": "Dizziness and giddiness",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "nausea",
+  "system": "ICD-10-CM",
+  "code": "R11.0",
+  "display": "Nausea",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "diarrhea",
+  "system": "ICD-10-CM",
+  "code": "R19.7",
+  "display": "Diarrhea, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "headache",
+  "system": "ICD-10-CM",
+  "code": "R51.9",
+  "display": "Headache, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "hemoglobin a1c",
+  "system": "LOINC",
+  "code": "4548-4",
+  "display": "Hemoglobin A1c/Hemoglobin.total in Blood",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "body mass index",
+  "system": "LOINC",
+  "code": "39156-5",
+  "display": "Body mass index (BMI) [Ratio]",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "blood pressure",
+  "system": "LOINC",
+  "code": "85354-9",
+  "display": "Blood pressure panel with all children optional",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "heart rate",
+  "system": "LOINC",
+  "code": "8867-4",
+  "display": "Heart rate",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "respiratory rate",
+  "system": "LOINC",
+  "code": "9279-1",
+  "display": "Respiratory rate",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "oxygen saturation",
+  "system": "LOINC",
+  "code": "59408-5",
+  "display": "Oxygen saturation in Arterial blood by Pulse oximetry",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": "Assumes pulse oximetry when shorthand SpO2 or pulse ox is used."
+ },
+ {
+  "canonical_name": "body temperature",
+  "system": "LOINC",
+  "code": "8310-5",
+  "display": "Body temperature",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "body weight",
+  "system": "LOINC",
+  "code": "29463-7",
+  "display": "Body weight",
+  "release_version": null,
+  "confidence": "high",
+  "rationale": null
+ },
+ {
+  "canonical_name": "comprehensive metabolic panel",
+  "system": "LOINC",
+  "code": "24323-8",
+  "display": "Comprehensive metabolic 2000 panel - Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "complete blood count",
+  "system": "LOINC",
+  "code": "58410-2",
+  "display": "Complete blood count (hemogram) panel - Blood by Automated count",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "basic metabolic panel",
+  "system": "LOINC",
+  "code": "51990-0",
+  "display": "Basic metabolic 2000 panel - Blood",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "Panel specimen and exact component set should be reviewed."
+ },
+ {
+  "canonical_name": "liver function tests",
+  "system": "LOINC",
+  "code": "24325-3",
+  "display": "Hepatic function 2000 panel - Serum or Plasma",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "LFT shorthand may refer to several local panel definitions."
+ },
+ {
+  "canonical_name": "lipid panel",
+  "system": "LOINC",
+  "code": "24331-1",
+  "display": "Lipid panel - Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "hemoglobin",
+  "system": "LOINC",
+  "code": "718-7",
+  "display": "Hemoglobin [Mass/volume] in Blood",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "white blood cell count",
+  "system": "LOINC",
+  "code": "6690-2",
+  "display": "Leukocytes [#/volume] in Blood by Automated count",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "platelet count",
+  "system": "LOINC",
+  "code": "777-3",
+  "display": "Platelets [#/volume] in Blood by Automated count",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "thyroid stimulating hormone",
+  "system": "LOINC",
+  "code": "3016-3",
+  "display": "Thyrotropin [Units/volume] in Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "creatinine",
+  "system": "LOINC",
+  "code": "2160-0",
+  "display": "Creatinine [Mass/volume] in Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "estimated glomerular filtration rate",
+  "system": "LOINC",
+  "code": "33914-3",
+  "display": "Glomerular filtration rate/1.73 sq M.predicted",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "eGFR method and equation are not specified in shorthand text."
+ },
+ {
+  "canonical_name": "low density lipoprotein cholesterol",
+  "system": "LOINC",
+  "code": "13457-7",
+  "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "high density lipoprotein cholesterol",
+  "system": "LOINC",
+  "code": "2085-9",
+  "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "triglycerides",
+  "system": "LOINC",
+  "code": "2571-8",
+  "display": "Triglyceride [Mass/volume] in Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "total cholesterol",
+  "system": "LOINC",
+  "code": "2093-3",
+  "display": "Cholesterol [Mass/volume] in Serum or Plasma",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "major depressive disorder",
+  "system": "ICD-10-CM",
+  "code": "F32.9",
+  "display": "Major depressive disorder, single episode, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Major depression mention does not establish episode, recurrence, severity, or remission status."
+ },
+ {
+  "canonical_name": "major depressive disorder",
+  "system": "SNOMED-CT",
+  "code": "370143000",
+  "display": "Major depressive disorder",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "depression",
+  "system": "ICD-10-CM",
+  "code": "F32.A",
+  "display": "Depression, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "depression",
+  "system": "SNOMED-CT",
+  "code": "35489007",
+  "display": "Depressive disorder",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "generalized anxiety disorder",
+  "system": "ICD-10-CM",
+  "code": "F41.1",
+  "display": "Generalized anxiety disorder",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "generalized anxiety disorder",
+  "system": "SNOMED-CT",
+  "code": "21897009",
+  "display": "Generalized anxiety disorder",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "anxiety",
+  "system": "ICD-10-CM",
+  "code": "F41.9",
+  "display": "Anxiety disorder, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "anxiety",
+  "system": "SNOMED-CT",
+  "code": "48694002",
+  "display": "Anxiety",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "post-traumatic stress disorder",
+  "system": "ICD-10-CM",
+  "code": "F43.10",
+  "display": "Post-traumatic stress disorder, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "post-traumatic stress disorder",
+  "system": "SNOMED-CT",
+  "code": "47505003",
+  "display": "Posttraumatic stress disorder",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "auditory/visual hallucinations",
+  "system": "ICD-10-CM",
+  "code": "R44.3",
+  "display": "Hallucinations, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "auditory/visual hallucinations",
+  "system": "SNOMED-CT",
+  "code": "7011001",
+  "display": "Hallucinations",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "patient health questionnaire-9",
+  "system": "LOINC",
+  "code": "44261-6",
+  "display": "Patient Health Questionnaire 9 item total score",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "generalized anxiety disorder-7",
+  "system": "LOINC",
+  "code": "70274-6",
+  "display": "Generalized anxiety disorder 7 item total score",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "sertraline",
+  "system": "RxNorm",
+  "code": "36437",
+  "display": "Sertraline",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "lisinopril",
+  "system": "RxNorm",
+  "code": "29046",
+  "display": "Lisinopril",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "metformin",
+  "system": "RxNorm",
+  "code": "6809",
+  "display": "Metformin",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "ibuprofen",
+  "system": "RxNorm",
+  "code": "5640",
+  "display": "Ibuprofen",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "acetaminophen",
+  "system": "RxNorm",
+  "code": "161",
+  "display": "Acetaminophen",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "albuterol",
+  "system": "RxNorm",
+  "code": "435",
+  "display": "Albuterol",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "atorvastatin",
+  "system": "RxNorm",
+  "code": "83367",
+  "display": "Atorvastatin",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "amlodipine",
+  "system": "RxNorm",
+  "code": "17767",
+  "display": "Amlodipine",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "losartan",
+  "system": "RxNorm",
+  "code": "52175",
+  "display": "Losartan",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "levothyroxine",
+  "system": "RxNorm",
+  "code": "10582",
+  "display": "Levothyroxine",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "omeprazole",
+  "system": "RxNorm",
+  "code": "7646",
+  "display": "Omeprazole",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "fluoxetine",
+  "system": "RxNorm",
+  "code": "4493",
+  "display": "Fluoxetine",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "escitalopram",
+  "system": "RxNorm",
+  "code": "321988",
+  "display": "Escitalopram",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "bupropion",
+  "system": "RxNorm",
+  "code": "42347",
+  "display": "Bupropion",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "duloxetine",
+  "system": "RxNorm",
+  "code": "72625",
+  "display": "Duloxetine",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "gabapentin",
+  "system": "RxNorm",
+  "code": "25480",
+  "display": "Gabapentin",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "low back pain",
+  "system": "ICD-10-CM",
+  "code": "M54.50",
+  "display": "Low back pain, unspecified",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "low back pain",
+  "system": "SNOMED-CT",
+  "code": "279039007",
+  "display": "Low back pain",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "shoulder pain",
+  "system": "ICD-10-CM",
+  "code": "M25.519",
+  "display": "Pain in unspecified shoulder",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Laterality and more specific location should be confirmed before final coding."
+ },
+ {
+  "canonical_name": "shoulder pain",
+  "system": "SNOMED-CT",
+  "code": "45326000",
+  "display": "Shoulder pain",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "neck pain",
+  "system": "ICD-10-CM",
+  "code": "M54.2",
+  "display": "Cervicalgia",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "knee pain",
+  "system": "ICD-10-CM",
+  "code": "M25.569",
+  "display": "Pain in unspecified knee",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Laterality should be confirmed for final coding."
+ },
+ {
+  "canonical_name": "hip pain",
+  "system": "ICD-10-CM",
+  "code": "M25.559",
+  "display": "Pain in unspecified hip",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Laterality should be confirmed for final coding."
+ },
+ {
+  "canonical_name": "pain rating",
+  "system": "LOINC",
+  "code": "72514-3",
+  "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "tobacco use",
+  "system": "SNOMED-CT",
+  "code": "110483000",
+  "display": "Tobacco user",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "alcohol use",
+  "system": "SNOMED-CT",
+  "code": "228273003",
+  "display": "Finding relating to alcohol drinking behavior",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": null
+ },
+ {
+  "canonical_name": "substance use",
+  "system": "SNOMED-CT",
+  "code": "66214007",
+  "display": "Substance abuse",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "Broad candidate only; substance, pattern, and disorder criteria require confirmation."
+ },
+ {
+  "canonical_name": "family history of diabetes mellitus",
+  "system": "SNOMED-CT",
+  "code": "160303001",
+  "display": "Family history of diabetes mellitus",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "family history of colon cancer",
+  "system": "SNOMED-CT",
+  "code": "312824007",
+  "display": "Family history of cancer of colon",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "gait abnormality",
+  "system": "SNOMED-CT",
+  "code": "22325002",
+  "display": "Abnormal gait",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "fall risk",
+  "system": "SNOMED-CT",
+  "code": "129839007",
+  "display": "At risk for falls",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "colonoscopy",
+  "system": "CPT",
+  "code": "45378",
+  "display": "Diagnostic colonoscopy",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "Generic diagnostic colonoscopy candidate; screening, biopsy, lesion removal, and payer context can change final coding."
+ },
+ {
+  "canonical_name": "colonoscopy",
+  "system": "SNOMED-CT",
+  "code": "73761001",
+  "display": "Colonoscopy",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "dysphagia",
+  "system": "ICD-10-CM",
+  "code": "R13.10",
+  "display": "Dysphagia, unspecified",
+  "release_version": "FY2026",
+  "confidence": "low",
+  "rationale": "Dysphagia type and phase are not established by a simple mention."
+ },
+ {
+  "canonical_name": "dysphagia",
+  "system": "SNOMED-CT",
+  "code": "40739000",
+  "display": "Dysphagia",
+  "release_version": null,
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "aphasia",
+  "system": "ICD-10-CM",
+  "code": "R47.01",
+  "display": "Aphasia",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "dysarthria",
+  "system": "ICD-10-CM",
+  "code": "R47.1",
+  "display": "Dysarthria and anarthria",
+  "release_version": "FY2026",
+  "confidence": "medium",
+  "rationale": null
+ },
+ {
+  "canonical_name": "modified barium swallow study",
+  "system": "CPT",
+  "code": "92611",
+  "display": "Motion fluoroscopic evaluation of swallowing function by cine or video recording",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "Starter procedure candidate; local billing and documentation context must be reviewed."
+ },
+ {
+  "canonical_name": "videofluoroscopic swallowing study",
+  "system": "CPT",
+  "code": "92611",
+  "display": "Motion fluoroscopic evaluation of swallowing function by cine or video recording",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "Starter procedure candidate; local billing and documentation context must be reviewed."
+ },
+ {
+  "canonical_name": "speech therapy",
+  "system": "CPT",
+  "code": "92507",
+  "display": "Treatment of speech, language, voice, communication, and/or auditory processing disorder",
+  "release_version": null,
+  "confidence": "low",
+  "rationale": "Broad speech therapy treatment candidate; service details must be reviewed."
+ }
+]

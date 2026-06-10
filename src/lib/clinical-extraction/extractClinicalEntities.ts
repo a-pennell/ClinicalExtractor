@@ -1,3 +1,12 @@
+/**
+ * @deprecated FROZEN — ADR-001 (docs/ADR-001-pipeline-consolidation.md).
+ * The Python clinical_nlp engine (served at POST /api/sessions/:id/extract) is
+ * the single extraction engine. This in-browser extractor is the legacy
+ * fallback used only when the engine is unreachable, until its lexicon
+ * coverage reaches parity (gated on the labeling plan). New application code
+ * must use lib/clinical-extraction/extractionClient (enforced by eslint
+ * no-restricted-imports).
+ */
 import { entityPatterns } from "./abbreviationDictionaries";
 import { resolveAbbreviations, type AbbreviationResolution } from "./abbreviationRegistry";
 import { detectClinicalContext, resolveExtractionSpecialties } from "./clinicalContext";

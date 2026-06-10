@@ -48,11 +48,14 @@ const assertionValues: AssertionStatus[] = [
   "present",
   "absent",
   "possible",
+  "conditional",
+  "hypothetical",
   "historical",
   "family-history",
   "planned",
   "ordered",
-  "conflicting"
+  "conflicting",
+  "unknown"
 ];
 const terminologySystems: TerminologySystem[] = ["ICD-10-CM", "SNOMED-CT", "LOINC", "RxNorm", "CPT", "HCPCS"];
 

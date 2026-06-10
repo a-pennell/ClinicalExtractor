@@ -1,3 +1,11 @@
+/**
+ * @deprecated FROZEN — ADR-001 (docs/ADR-001-pipeline-consolidation.md).
+ * Clinical assertion is resolved by clinical_nlp (negation.py), which is
+ * sentence-scoped with termination cues and the full A3 assertion vocabulary.
+ * This 36-char-lookbehind module is a false-positive *and* false-negative
+ * generator (audit C1) kept only as a legacy fallback. Do not import from
+ * application code (enforced by eslint no-restricted-imports).
+ */
 import type { Segment } from "./types";
 
 const negationTriggers = [

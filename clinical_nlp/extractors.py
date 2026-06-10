@@ -143,20 +143,30 @@ class HybridExtractor(BaseExtractor):
     def extract(self, text: str) -> list[ClinicalMention]:
         """Run deterministic extraction and synchronously escalate complex text."""
 
+        return self.extract_outcome(text).mentions
+
+    def extract_outcome(self, text: str) -> "ExtractionOutcome":
+        """Extract with an outcome envelope surfacing escalation failures.
+
+        Resolves the audit B2 TODO: provider failures degrade to NLP-only
+        output (behavior unchanged) AND are now visible to callers via
+        ``escalation_failed`` so review queues can prioritize degraded notes
+        (operating-point policy section 5).
+        """
+
         nlp_mentions = self.nlp_extractor.extract(text)
         triage = self.triage_policy.triage(text, nlp_mentions)
         if not triage.requires_llm:
-            return nlp_mentions
+            return ExtractionOutcome(mentions=nlp_mentions, escalation_failed=False, escalated=False)
         try:
             llm_mentions = self.llm_extractor.extract(triage.compressed_text)
         except LLMExtractionError:
-            # AUDIT FIX: a provider failure previously discarded all deterministic
-            # results. Degrade to NLP-only output instead of failing the document.
-            # TODO(audit): surface the degradation to callers (e.g. an
-            # ExtractionResult envelope with `escalation_failed=True`) so review
-            # queues can prioritize these notes instead of silently passing them.
-            return nlp_mentions
-        return merge_mentions(nlp_mentions, remap_mentions_to_source(text, triage.compressed_text, llm_mentions))
+            # AUDIT FIX (B2): a provider failure previously discarded all
+            # deterministic results. Degrade to NLP-only output instead of
+            # failing the document.
+            return ExtractionOutcome(mentions=nlp_mentions, escalation_failed=True, escalated=True)
+        merged = merge_mentions(nlp_mentions, remap_mentions_to_source(text, triage.compressed_text, llm_mentions))
+        return ExtractionOutcome(mentions=merged, escalation_failed=False, escalated=True)
 
     async def extract_async(self, text: str) -> list[ClinicalMention]:
         """Run deterministic extraction and asynchronously escalate complex text."""
@@ -179,6 +189,15 @@ class TriageDecision:
     requires_llm: bool
     reasons: tuple[str, ...]
     compressed_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ExtractionOutcome:
+    """Extraction result envelope with degradation visibility (audit B2)."""
+
+    mentions: list[ClinicalMention]
+    escalation_failed: bool
+    escalated: bool
 
 
 class TriagePolicy:

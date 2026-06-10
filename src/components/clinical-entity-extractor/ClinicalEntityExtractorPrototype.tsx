@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, ClipboardList, RotateCcw, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import { detectClinicalContext } from "../../lib/clinical-extraction/clinicalContext";
+// REVIEW(ADR-001): the imports below from extractClinicalEntities and
+// evaluationFixtures are FROZEN inference modules. They remain only as the
+// legacy fallback while the Python engine's lexicon coverage is below parity
+// (coverage expansion is gated on the labeling plan) and because this
+// component's tests pin the local-extraction workbench, which the remediation
+// ground rules forbid rewriting unilaterally. New code must use
+// extractionClient instead — enforced by ESLint no-restricted-imports; this
+// file carries an explicit exception in eslint.config.mjs.
 import { extractClinicalEntityDocument } from "../../lib/clinical-extraction/extractClinicalEntities";
+import { extractViaEngine, probeEngineAvailability } from "../../lib/clinical-extraction/extractionClient";
 import type { EvaluationFixture } from "../../lib/clinical-extraction/evaluationFixtures";
 import { sampleInputs } from "../../lib/clinical-extraction/sampleInputs";
 import { detectClinicalSections, getSectionForOffset, getSectionLabel } from "../../lib/clinical-extraction/sectionParser";
@@ -54,11 +63,41 @@ export function ClinicalEntityExtractorPrototype() {
   const [savedSessions, setSavedSessions] = useState<SavedExtractionSession[]>([]);
   const [selectedSavedSessionId, setSelectedSavedSessionId] = useState("");
   const [sessionMessage, setSessionMessage] = useState("");
+  const [engineAvailable, setEngineAvailable] = useState(false);
+
+  useEffect(() => {
+    // ADR-001: prefer the server-side clinical_nlp engine when deployed
+    // behind server.mjs; fall back to the frozen local extractor otherwise.
+    void probeEngineAvailability().then(setEngineAvailable);
+  }, []);
 
   useEffect(() => {
     if (!globalThis.indexedDB) return;
     void refreshSavedSessions();
   }, []);
+
+  function applyEntities(nextEntities: ClinicalEntity[]) {
+    setEntities(nextEntities);
+    setSelectedEntityId(nextEntities[0]?.id ?? null);
+    setHasExtracted(true);
+  }
+
+  function runExtraction(sourceText: string, options: { specialty?: Specialty; mode: "auto" | "override" }) {
+    if (engineAvailable) {
+      void extractViaEngine(sourceText, options.specialty ?? "mixed").then((result) => {
+        if (result) {
+          applyEntities(result.entities);
+          if (result.escalationFailed) {
+            setSessionMessage("Engine escalation degraded; results queued for review (B2).");
+          }
+          return;
+        }
+        applyEntities(extractClinicalEntityDocument(sourceText, options).entities);
+      });
+      return;
+    }
+    applyEntities(extractClinicalEntityDocument(sourceText, options).entities);
+  }
 
   const selectedEntity = useMemo(
     () => entities.find((entity) => entity.id === selectedEntityId) ?? null,
@@ -93,30 +132,21 @@ export function ClinicalEntityExtractorPrototype() {
   }
 
   function handleExtract() {
-    const nextEntities = extractClinicalEntityDocument(text, { specialty, mode: contextMode }).entities;
-    setEntities(nextEntities);
-    setSelectedEntityId(nextEntities[0]?.id ?? null);
-    setHasExtracted(true);
+    runExtraction(text, { specialty, mode: contextMode });
   }
 
   function loadExample(nextSpecialty: Specialty) {
     setSpecialty(nextSpecialty);
     setContextMode("auto");
     setText(sampleInputs[nextSpecialty]);
-    const nextEntities = extractClinicalEntityDocument(sampleInputs[nextSpecialty], { mode: "auto" }).entities;
-    setEntities(nextEntities);
-    setSelectedEntityId(nextEntities[0]?.id ?? null);
-    setHasExtracted(true);
+    runExtraction(sampleInputs[nextSpecialty], { mode: "auto" });
   }
 
   function loadEvalFixture(fixture: EvaluationFixture) {
     setSpecialty(fixture.specialty);
     setContextMode("auto");
     setText(fixture.text);
-    const nextEntities = extractClinicalEntityDocument(fixture.text, { mode: "auto" }).entities;
-    setEntities(nextEntities);
-    setSelectedEntityId(nextEntities[0]?.id ?? null);
-    setHasExtracted(true);
+    runExtraction(fixture.text, { mode: "auto" });
   }
 
   async function refreshSavedSessions() {

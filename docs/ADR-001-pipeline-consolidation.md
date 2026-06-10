@@ -49,6 +49,42 @@ The one asset the TS side is ahead on — `terminologyMappings.ts` (~1,100 lines
 4. CI runs pytest + vitest + `run_eval.py --min-f1` on every PR (audit C6 gap).
 5. `data/gold/seed_notes.jsonl` eval shows no per-type F1 regression vs. the pre-cutover Python baseline.
 
+## Implementation notes (cutover build)
+
+**Transport: stdio NDJSON worker, not an HTTP sidecar.** `server.mjs` spawns
+`python -m clinical_nlp.service` once via `server/engine.mjs` and exchanges one
+JSON request/response per line. Rationale: the repo's run scripts already use
+plain `node server.mjs` plus a stdlib-only Python package; a FastAPI sidecar
+would introduce the first Python web dependency and a second listening port
+with no contract benefit and a larger PHI surface (a second bound socket). The
+worker is long-lived (no per-request process spawn) and the bridge enforces a
+timeout, degrading to HTTP 503 — never a partial result — when the engine is
+unreachable.
+
+**Envelope.** `clinical_nlp/service.build_envelope` returns: `mentions`
+(source-text offsets, mention-level assertion, confidence), `entities` (rollup
+with `conflicting`/`unknown` status + `review_priority`), `codings` from
+`clinical_nlp/normalization.py` with `is_coded` release-pinning flags, and the
+B2 `escalation_failed` field. `server/api.mjs::toClientEntities` adapts this to
+the existing client entity shape — a pure rendering map, no clinical inference.
+
+**PHI discipline.** The engine's stderr is discarded (Python tracebacks could
+embed note text); engine failures surface as error codes only. CORS stays
+opt-in (B3).
+
+**TS demotion.** `negationRules.ts`, `dedupeEntities.ts`, and
+`extractClinicalEntities.ts` carry `@deprecated` frozen headers and are blocked
+from application imports by `eslint.config.mjs` (`no-restricted-imports`) and a
+runtime guard test (`frozenModules.test.ts`). The clinician component keeps a
+single documented exception: a fallback to the local extractor when the engine
+is unreachable, until engine lexicon coverage reaches parity (gated on the
+labeling plan). The eval/lab demo panels are a separate frozen-demo surface.
+
+**Terminology migration (B5).** All 108 codings / 86 canonical names from
+`terminologyMappings.ts` were migrated to `clinical_nlp/data/terminology_seed.json`
+with a `release_version` field; only ICD-10-CM (FY2026) is pinned, so non-ICD
+codings report `is_coded: false` until their releases are pinned.
+
 ## Revisit triggers
 
 Re-open this decision only if: extraction latency p95 exceeds 1.5 s and cannot be optimized server-side; or a hard requirement emerges for fully offline operation with real PHI (which would itself require a far larger security redesign than a TS engine).
